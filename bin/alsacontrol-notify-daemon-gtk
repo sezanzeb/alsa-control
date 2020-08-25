@@ -1,0 +1,103 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+# ALSA-Control - ALSA configuration interface
+# Copyright (C) 2020 sezanzeb <proxima@hip70890b.de>
+#
+# This file is part of ALSA-Control.
+#
+# ALSA-Control is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# ALSA-Control is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with ALSA-Control.  If not, see <https://www.gnu.org/licenses/>.
+
+
+"""Displays notifications for the current volume."""
+
+
+import gi
+from dbus import service
+from dbus.mainloop.glib import DBusGMainLoop
+import dbus.mainloop.glib
+
+gi.require_version('GLib', '2.0')
+gi.require_version('Gio', '2.0')
+from gi.repository import Gio, GLib
+import alsaaudio
+
+from alsacontrol.asoundrc import setup
+
+
+Application = Gio.Application.new(
+    'alsacontrol.volume',
+    Gio.ApplicationFlags.FLAGS_NONE
+)
+Application.register()
+
+
+class Volume(service.Object):
+    """Waits for volume changes over alsacontrol and displays them."""
+    @dbus.service.method(
+        'com.alsacontrol.Interface',
+        in_signature='s'
+    )
+    def change_volume(self, volume):
+        """Change the current output volume
+
+        Parameters
+        ----------
+        volume : int
+            Relative change. Between -100 and 100
+        """
+        volume = int(volume)
+        mixer = alsaaudio.Mixer('alsacontrol-output-volume')
+        current_volume = mixer.getvolume()[0]
+        new_volume = min(100, max(0, current_volume + volume))
+        mixer.setvolume(new_volume)
+        current_volume = mixer.getvolume()[0]
+        self.notify(current_volume)
+
+    def notify(self, volume):
+        """Show the specified volume in a desktop notification
+
+        Parameters
+        ----------
+        volume : int
+            Absolute current volume between 0 and 100
+        """
+        # various icons to visualize the volume
+        if volume <= 0:
+            icon = 'audio-volume-muted'
+        elif volume < 33:
+            icon = 'audio-volume-low'
+        elif volume < 66:
+            icon = 'audio-volume-medium'
+        else:
+            icon = 'audio-volume-high'
+
+        volume = '{}%'.format(volume)
+
+        notification = Gio.Notification.new('')
+        notification.set_body(volume)
+        notification.set_icon(Gio.ThemedIcon.new(icon))
+        # provide the application_id in order to replace any existing note
+        Application.send_notification('alsacontrol.volume', notification)
+
+
+if __name__ == '__main__':
+    setup()
+
+    # make sure our .asoundrc is included so that the mixer name exists
+    session_bus = dbus.SessionBus(mainloop=DBusGMainLoop())
+    name = dbus.service.BusName('com.alsacontrol.Volume', session_bus)
+    Volume(session_bus, '/')
+
+    mainloop = GLib.MainLoop()
+    mainloop.run()

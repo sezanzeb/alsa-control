@@ -1,0 +1,69 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+# ALSA-Control - ALSA configuration interface
+# Copyright (C) 2020 sezanzeb <proxima@hip70890b.de>
+#
+# This file is part of ALSA-Control.
+#
+# ALSA-Control is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# ALSA-Control is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with ALSA-Control.  If not, see <https://www.gnu.org/licenses/>.
+
+
+"""Command line interface mainly to control the volume."""
+
+
+import sys
+import dbus
+from optparse import OptionParser
+
+from alsacontrol.asoundrc import create_asoundrc
+
+parser = OptionParser()
+parser.add_option(
+    '-d', '--debug', action='store_true', dest='debug',
+    help='Displays additional debug information',
+    default=False
+)
+parser.add_option(
+    '-c', '--configure', action='store_true', dest='configure',
+    help=(
+        'Load the configuration file at ~/.config/alsacontrol'
+        'and setup ~/.asoundrc'
+    ),
+    default=False
+)
+parser.add_option(
+    '-v', '--volume', action='store', dest='volume',
+    help=(
+        'For example "10+" or "10-" for relative volumes, '
+        'or "50" for an absolute Volume.'
+    ),
+    default=False
+)
+
+(options, args) = parser.parse_args(sys.argv[1:])
+
+if options.volume:
+    bus = dbus.SessionBus()
+
+    remote_object = bus.get_object(
+        'com.alsacontrol.Volume',
+        '/'
+    )
+
+    interface = dbus.Interface(remote_object, 'com.alsacontrol.Interface')
+    interface.change_volume(options.volume)
+
+if options.configure:
+    # configure .asoundrc based on ~/.config/alsacontrol and leave
+    create_asoundrc()
