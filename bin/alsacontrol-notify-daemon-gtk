@@ -43,7 +43,12 @@ Application.register()
 
 
 class Volume(service.Object):
-    """Waits for volume changes over alsacontrol and displays them."""
+    """Waits for volume changes over alsacontrol and displays them.
+
+    This needs to be done by a daemon, so that it can hold a state and
+    replace the old notification with the outdated volume instead of
+    stacking them.
+    """
     @dbus.service.method(
         'com.alsacontrol.Interface',
         in_signature='s'

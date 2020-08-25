@@ -17,7 +17,7 @@ pip3 install pyalsaaudio
 python3 setup.py install
 ```
 
-Start the daemon that will display notifications on volume changes. You can put this into your autostart.
+Start the daemon. You can put this into your autostart.
 
 ```
 alsacontrol-notify-daemon-gtk
