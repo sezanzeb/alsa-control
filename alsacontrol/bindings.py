@@ -30,13 +30,7 @@ import pkg_resources
 from alsacontrol.logger import logger, update_verbosity
 
 
-class Notification:
-    """Base class for notifications"""
-    def show(self):
-        raise NotImplementedError
-
-
-class Bindings():
+class Bindings:
     """Do everything the ui code wants to do without using ui libs."""
     def __init__(self):
         """Parse argv, print version, execute command if possible."""
@@ -55,8 +49,3 @@ class Bindings():
         update_verbosity(options.debug)
 
         logger.info(('{} {}'.format(NAME, VERSION)))
-
-        if parser.volume:
-
-
-        return parser

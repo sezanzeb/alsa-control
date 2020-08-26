@@ -10,7 +10,7 @@ Furthermore, pure ALSA should have the lowest possible audio latency.
 
 ## Usage
 
-You can't configure your soundcard yet, so it won't work for you at this point.
+It will try to select a default soundcard when no config file exists yet. The config is in `~/.config/alsacontrol/config`
 
 ```
 pip3 install pyalsaaudio
@@ -20,7 +20,7 @@ python3 setup.py install
 Start the daemon. You can put this into your autostart.
 
 ```
-alsacontrol-notify-daemon-gtk
+alsacontrol-daemon-gtk
 ```
 
 Change the volume. For convenience, bind this to your multimedia keys in your user interface
@@ -28,6 +28,7 @@ Change the volume. For convenience, bind this to your multimedia keys in your us
 ```
 alsacontrol -v +10
 alsacontrol -v -10
+alsacontrol -m
 ```
 
 <p align="center">
@@ -57,5 +58,5 @@ Quality
 - Provide well written docstrings
 - Don't just grey out stuff, provide proper error messages and log outputs to debug problems
 - Don't automatically switch devices when the current device is not available. But maybe add user defined fallback devices
-- Be verbose with logs, provide debug logs
+- Be verbose with logs, provide debug logs. All logs start uppercase
 

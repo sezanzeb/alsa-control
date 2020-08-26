@@ -18,19 +18,29 @@
 # You should have received a copy of the GNU General Public License
 # along with ALSA-Control.  If not, see <https://www.gnu.org/licenses/>.
 
-import DistUtilsExtra.auto
+
+import unittest
+
+from alsacontrol.config import _modify_config
 
 
-DistUtilsExtra.auto.setup(
-    name='alsacontrol',
-    version='0.1.0',
-    description='ALSA configuration interface',
-    license='GPL-3.0',
-    data_files=[
-        ('share/alsacontrol/', ['data/asoundrc-template']),
-        ('/etc/xdg/autostart/', ['data/alsacontrol-daemon.desktop'])
-    ],
-    install_requires=[
-         'pyalsaaudio',
-     ],
-)
+class ConfigTest(unittest.TestCase):
+    def testFirstLine(self):
+        contents = """a=1\n # test=3\n  abc=123"""
+        contents = _modify_config(contents, 'a', 3)
+        self.assertEqual(contents, """a=3\n # test=3\n  abc=123""")
+
+    def testLastLine(self):
+        contents = """a=1\n # test=3\n  abc=123"""
+        contents = _modify_config(contents, 'abc', 'foo')
+        self.assertEqual(contents, """a=1\n # test=3\nabc=foo""")
+
+    def testNewLine(self):
+        contents = """a=1\n # test=3\n  abc=123"""
+        contents = _modify_config(contents, 'test', '1234')
+        self.assertEqual(contents, """a=1\n # test=3\n  abc=123\ntest=1234""")
+
+
+
+if __name__ == "__main__":
+    unittest.main()

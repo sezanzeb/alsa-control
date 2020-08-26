@@ -18,19 +18,27 @@
 # You should have received a copy of the GNU General Public License
 # along with ALSA-Control.  If not, see <https://www.gnu.org/licenses/>.
 
-import DistUtilsExtra.auto
+
+"""Sets up ALSA-Control for the tests and runs them."""
 
 
-DistUtilsExtra.auto.setup(
-    name='alsacontrol',
-    version='0.1.0',
-    description='ALSA configuration interface',
-    license='GPL-3.0',
-    data_files=[
-        ('share/alsacontrol/', ['data/asoundrc-template']),
-        ('/etc/xdg/autostart/', ['data/alsacontrol-daemon.desktop'])
-    ],
-    install_requires=[
-         'pyalsaaudio',
-     ],
-)
+import sys
+import unittest
+
+
+if __name__ == "__main__":
+    modules = sys.argv[1:]
+    # discoverer is really convenient, but it can't find a specific test
+    # in all of the available tests like unittest.main() does...,
+    # so provide both options.
+    if len(modules) > 0:
+        # for example `tests/test.py ConfigTest.testFirstLine`
+        testsuite = unittest.defaultTestLoader.loadTestsFromNames(
+            ['testcases.{}'.format(module) for module in modules]
+        )
+    else:
+        # run all tests by default
+        testsuite = unittest.defaultTestLoader.discover(
+            'testcases', pattern='*.py'
+        )
+    testrunner = unittest.TextTestRunner(verbosity=1).run(testsuite)

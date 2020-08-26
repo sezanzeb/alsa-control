@@ -22,28 +22,106 @@
 
 
 import os
-import json
+import re
+
+import alsaaudio
+
+from alsacontrol.logger import logger
+from alsacontrol.alsa import get_sysdefault
+
+
+def _modify_config(config_contents, key, value):
+    """Write settings into a config files contents.
+
+    Parameters
+    ----------
+    config_contents : string
+        Contents of the config file in ~/.config/alsacontrol/config
+    key : string
+        Settings key that should be modified
+    value : string, int
+        Value to write
+    """
+    logger.info('Setting "%s" to "%s"', key, value)
+    split = config_contents.split('\n')
+    if split[-1] == '':
+        split = split[:-1]
+
+    found = False
+    setting = '{}={}'.format(key, value)
+    for i, line in enumerate(split):
+        strip = line.strip()
+        if strip.startswith('#'):
+            continue
+        if strip.startswith('{}='.format(key)):
+            # replace the setting
+            logger.debug('Overwriting "%s=%s" in config', key, value)
+            split[i] = setting
+            found = True
+            break
+    if not found:
+        logger.debug('Adding "%s=%s" to config', key, value)
+        split.append(setting)
+    return '\n'.join(split)
+
+
+_config = None
 
 
 class Config:
     def __init__(self):
         self._path = os.path.expanduser('~/.config/alsacontrol/config')
+        self._config = {}
 
         # create an empty config if it doesn't exist
         if not os.path.exists(self._path):
-            with open(self._path, 'w+') as config_file:
-                json.dump({}, config_file)
+            logger.info('Creating config file "%s"', self._path)
+            os.mknod(self._path)
+            # add all default values. Don't guess those values during
+            # operation to avoid suddenly changing the output device.
+            self.set('pcm_input', get_sysdefault(alsaaudio.PCM_CAPTURE))
+            self.set('pcm_output', get_sysdefault(alsaaudio.PCM_PLAYBACK))
 
         # load config
-        with open(self._path) as config_file:
-            self._config = json.load(config_file)
+        with open(self._path, 'r') as config_file:
+            for line in config_file:
+                line = line.strip()
+                if not line.startswith('#'):
+                    split = line.split('=', 1)
+                    print('#', line, '#', split)
+                    if len(split) == 2:
+                        key = split[0]
+                        value = split[1]
+                    else:
+                        key = split[0]
+                        value = None
+                self._config[key] = value
 
-    def get(self, key, default):
+    def get(self, key, default=None):
         """Read a value from the configuration."""
         return self._config.get(key, default)
 
     def set(self, key, value):
         """Write a setting into memory and ~/.config/alsacontrol/config."""
-        self._config[key] = value
-        with open(self._path, 'w+') as config_file:
-            json.dump(self._config, config_file)
+        if key in value and self._config[key] == value:
+            logger.debug('Setting "%s" is already "%s"', key, value)
+        else:
+            self._config[key] = value
+
+            with open(self._path, 'r+') as config_file:
+                config_contents = config_file.read()
+                print(1, config_contents)
+                config_contents = _modify_config(config_contents, key, value)
+
+            # overwrite completely
+            with open(self._path, 'w') as config_file:
+                if not config_contents.endswith('\n'):
+                    config_contents += '\n'
+                config_file.write(config_contents)
+
+
+def get_config():
+    global _config
+    if _config is None:
+        _config = Config()
+    return _config

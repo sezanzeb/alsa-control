@@ -18,16 +18,17 @@
 # You should have received a copy of the GNU General Public License
 # along with ALSA-Control.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Utilities needed to modify .asoundrc files."""
+"""Utilities needed to modify the .asoundrc configuration."""
 
 
 import os
 
 from alsacontrol.data import get_data_path
+from alsacontrol.config import get_config
 from alsacontrol.logger import logger
 
 
-alsactl_asoundrc = os.path.expanduser('~/.config/alsacontrol/.asoundrc')
+alsactl_asoundrc = os.path.expanduser('~/.config/alsacontrol/asoundrc')
 
 
 def setup():
@@ -73,12 +74,17 @@ def check_asoundrc():
 
 
 def create_asoundrc():
-    """Create and populate ~/.config/alsacontrol/.asoundrc."""
+    """Create and populate ~/.config/alsacontrol/asoundrc."""
     input_softvol = False
-    pcm_input = 'sysdefault:CARD=UR22C'
+    pcm_input = get_config().get('pcm_input', 'null')
 
     output_softvol = True
-    pcm_output = 'sysdefault:CARD=UR22C'
+    pcm_output = get_config().get('pcm_output', 'null')
+
+    if pcm_input is None:
+        logger.error('No input specified')
+    if pcm_output is None:
+        logger.error('No output specified')
 
     asoundrc_config = {
         'input_pcm_1': 'alsacontrol-input' if input_softvol else pcm_input,
@@ -87,14 +93,14 @@ def create_asoundrc():
         'output_pcm_2': pcm_output
     }
 
-    template_path = os.path.join(get_data_path(), '.asoundrc')
+    template_path = os.path.join(get_data_path(), 'asoundrc-template')
     with open(template_path, 'r') as template_file:
         template = template_file.read()
 
     asoundrc_content = template.format(**asoundrc_config)
 
     with open(alsactl_asoundrc, 'w+') as asoundrc_file:
-        print('writing file', alsactl_asoundrc)
+        logger.info('Writing file %s', alsactl_asoundrc)
         asoundrc_file.write(asoundrc_content)
 
 

@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with ALSA-Control.  If not, see <https://www.gnu.org/licenses/>.
 
+# This file will be overwritten, don't edit it by hand
+
 pcm.alsacontrol-output {{
     type softvol
     slave.pcm {{

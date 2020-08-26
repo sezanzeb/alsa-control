@@ -27,7 +27,7 @@ class Formatter(logging.Formatter):
         debug = logger.level == logging.DEBUG
         if record.levelno == logging.INFO and not debug:
             # if not launched with --debug, then don't print "INFO:"
-            self._style._fmt = '%(msg)s'  # noqa
+            self._style._fmt = '%(message)s'  # noqa
         else:
             # see https://en.wikipedia.org/wiki/ANSI_escape_code#3/4_bit
             # for those numbers
@@ -41,11 +41,11 @@ class Formatter(logging.Formatter):
             if debug:
                 self._style._fmt = (  # noqa
                     '\033[{}m%(levelname)s\033[0m: '
-                    '%(filename)s, line %(lineno)d, %(msg)s'
+                    '%(filename)s, line %(lineno)d, %(message)s'
                 ).format(color)
             else:
                 self._style._fmt = (  # noqa
-                    '\033[{}m%(levelname)s\033[0m: %(msg)s'
+                    '\033[{}m%(levelname)s\033[0m: %(message)s'
                 ).format(color)
         return super().format(record)
 
@@ -54,6 +54,7 @@ logger = logging.getLogger()
 handler = logging.StreamHandler()
 handler.setFormatter(Formatter())
 logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 
 def update_verbosity(debug):
