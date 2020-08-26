@@ -40,7 +40,7 @@ alsacontrol -v -10
 Basically provide everything that is needed to comfortably use ALSA in a GUI
 
 Features
-- ✓ Show a volume meter as notification on volume changes or mute toggling, much like pulseaudio
+- Show a volume meter as notification on volume changes or mute toggling, much like pulseaudio
 - Change the volume of soundcards without Master controls with softvol
 - Add a GUI slider and mute button for the volume of both input and output
 - Add button to test the speaker setup
