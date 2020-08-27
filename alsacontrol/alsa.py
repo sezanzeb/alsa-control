@@ -22,9 +22,6 @@
 """Helperfunctions to talk to alsa and further simplify pyalsaaudio."""
 
 
-import re
-import subprocess
-
 import alsaaudio
 from alsacontrol.logger import logger
 
@@ -44,8 +41,7 @@ def get_sysdefault(pcm_type):
     for pcm in pcm_list:
         if pcm.startswith('sysdefault:'):
             return pcm
-    else:
-        return 'null'
+    return 'null'
 
 
 def set_volume(volume):
@@ -75,9 +71,8 @@ def toggle_mute():
     if mixer.getmute()[0]:
         mixer.setmute(0)
         return False
-    else:
-        mixer.setmute(1)
-        return True
+    mixer.setmute(1)
+    return True
 
 
 def is_muted():

@@ -19,10 +19,14 @@
 # along with ALSA-Control.  If not, see <https://www.gnu.org/licenses/>.
 
 
+"""Logging setup for ALSA-Control."""
+
+
 import logging
 
 
 class Formatter(logging.Formatter):
+    """Overwritten Formatter to print nicer logs."""
     def format(self, record):
         debug = logger.level == logging.DEBUG
         if record.levelno == logging.INFO and not debug:

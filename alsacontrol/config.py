@@ -22,7 +22,6 @@
 
 
 import os
-import re
 
 import alsaaudio
 
@@ -119,6 +118,9 @@ class Config:
 
 
 def get_config():
+    """Ask for the config. Initialize it if not yet done so."""
+    # don't initialize it right away in the global scope, to avoid having
+    # the wrong logging verbosity.
     global _config
     if _config is None:
         _config = Config()

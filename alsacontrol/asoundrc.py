@@ -68,8 +68,8 @@ def check_asoundrc():
                     )
                 if 'alsacontrol-' in line:
                     logger.warning(
-                        'your rule "{}" '.format(line) +
-                        'conflicts with ALSA-Control'
+                        'your rule "%s" conflicts with ALSA-Control',
+                        line
                     )
 
 
@@ -102,6 +102,3 @@ def create_asoundrc():
     with open(alsactl_asoundrc, 'w+') as asoundrc_file:
         logger.info('Writing file %s', alsactl_asoundrc)
         asoundrc_file.write(asoundrc_content)
-
-
-

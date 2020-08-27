@@ -23,29 +23,31 @@
 
 
 import sys
-from optparse import OptionParser
-from gettext import gettext as _
+from argparse import ArgumentParser
 import pkg_resources
 
 from alsacontrol.logger import logger, update_verbosity
+
+
+def print_info():
+    """Log version and name to the console"""
+    # read values from setup.py
+    version = pkg_resources.require('alsacontrol')[0].version
+    name = pkg_resources.require('alsacontrol')[0].project_name
+    logger.info('%s %s', version, name)
 
 
 class Bindings:
     """Do everything the ui code wants to do without using ui libs."""
     def __init__(self):
         """Parse argv, print version, execute command if possible."""
-        parser = OptionParser()
-        parser.add_option(
+        parser = ArgumentParser()
+        parser.add_argument(
             '-d', '--debug', action='store_true', dest='debug',
-            help=_('Displays additional debug information'),
+            help='Displays additional debug information',
             default=False
         )
 
-        # read values from setup.py
-        VERSION = pkg_resources.require('alsacontrol')[0].version
-        NAME = pkg_resources.require('alsacontrol')[0].project_name
-
-        (options, args) = parser.parse_args(sys.argv[1:])
+        options = parser.parse_args(sys.argv[1:])
         update_verbosity(options.debug)
-
-        logger.info(('{} {}'.format(NAME, VERSION)))
+        print_info()

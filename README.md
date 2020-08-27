@@ -36,6 +36,14 @@ alsacontrol -m
 </p>
 
 
+## Testing
+
+```
+pylint alsacontrol --extension-pkg-whitelist=alsaaudio
+sudo python3 setup.py install && python3 tests/test.py
+```
+
+
 ## Goals
 
 Basically provide everything that is needed to comfortably use ALSA in a GUI

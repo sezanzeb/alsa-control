@@ -22,24 +22,25 @@
 """Displays notifications for the current volume."""
 
 
-import gi
 import sys
+from argparse import ArgumentParser
+
 from dbus import service
 from dbus.mainloop.glib import DBusGMainLoop
 import dbus.mainloop.glib
-from optparse import OptionParser
-
+import gi
 gi.require_version('Notify', '0.7')
 gi.require_version('GLib', '2.0')
 gi.require_version('Gio', '2.0')
 gi.require_version('Gtk', '3.0')
-from gi.repository import Notify, Gio, GLib, Gtk
+from gi.repository import Notify, GLib
 
-from alsacontrol.asoundrc import setup, create_asoundrc
+from alsacontrol.asoundrc import setup
 from alsacontrol.logger import logger, update_verbosity
 from alsacontrol.alsa import set_volume, get_volume, toggle_mute, is_muted
+from alsacontrol.bindings import print_info
 
-# TODO pylint mal alles
+
 Notify.init('ALSA-Control')
 
 
@@ -54,14 +55,29 @@ class Daemon(service.Object):
         self._notification_id = None
         self.exponent = 3
 
-        # fine grained current mixer volume.
-        # alsamixer only provides a resolution of 100
-        # and softvol of 1048
-        self.perceived_volume = self.to_percieved_volume(get_volume())
+        # fine grained current mixer volume to better convert from linear
+        # to perceived volume without having to worry about rounding.
+        # Especially going down by 10% and up by 10% should end up at the
+        # initial volume.
+        # alsamixer only provides a resolution of 100 and softvol of max 1048
+        self.perceived_volume = self.to_perceived_volume(get_volume())
 
         super().__init__(*args, **kwargs)
 
-    def to_percieved_volume(self, volume):
+    def check_volume_integrity(self):
+        """If the internal volume is out of touch with the mixer, reset."""
+        expected_mixer_volume = self.to_mixer_volume(self.perceived_volume)
+        actual_mixer_volume = get_volume()
+        if expected_mixer_volume - actual_mixer_volume > 0.1:
+            logger.debug(
+                'Resetting the internal volume '
+                '(%s) to the mixers actual value (%s)',
+                expected_mixer_volume,
+                actual_mixer_volume
+            )
+            self.perceived_volume = self.to_perceived_volume(get_volume())
+
+    def to_perceived_volume(self, volume):
         """For a mixer volume of 0.5, figure out the perceived volume."""
         return max(0, min(1, volume ** self.exponent))
 
@@ -98,6 +114,7 @@ class Daemon(service.Object):
         volume : int
             perceived volume change between -1 and +1
         """
+        self.check_volume_integrity()
         logger.debug('Received volume change of %s', volume)
         perceived_new = max(0, min(1, self.perceived_volume + volume))
         mixer_new = self.to_mixer_volume(perceived_new)
@@ -115,6 +132,7 @@ class Daemon(service.Object):
         self.notify(self.perceived_volume, muted)
 
     def notify(self, volume, muted):
+        """Display a pretty notification for volume and mute state."""
         # various icons to visualize the volume
         if muted or volume <= 0:
             icon = 'audio-volume-muted'
@@ -135,22 +153,24 @@ class Daemon(service.Object):
         logger.info('Changing the volume to %s, %s', volume_string, muted)
 
 
-parser = OptionParser()
-parser.add_option(
-    '-d', '--debug', action='store_true', dest='debug',
-    help='Displays additional debug information',
-    default=False
-)
-(options, args) = parser.parse_args(sys.argv[1:])
+if __name__ == '__main__':
+    parser = ArgumentParser()
+    parser.add_argument(
+        '-d', '--debug', action='store_true', dest='debug',
+        help='Displays additional debug information',
+        default=False
+    )
+    options = parser.parse_args(sys.argv[1:])
+    update_verbosity(options.debug)
 
-update_verbosity(options.debug)
+    print_info()
 
-setup()
+    setup()
 
-# make sure our .asoundrc is included so that the mixer name exists
-session_bus = dbus.SessionBus(mainloop=DBusGMainLoop())
-name = dbus.service.BusName('com.alsacontrol.Volume', session_bus)
-Daemon(session_bus, '/')
+    # make sure our .asoundrc is included so that the mixer name exists
+    session_bus = dbus.SessionBus(mainloop=DBusGMainLoop())
+    name = dbus.service.BusName('com.alsacontrol.Volume', session_bus)
+    Daemon(session_bus, '/')
 
-mainloop = GLib.MainLoop()
-mainloop.run()
+    mainloop = GLib.MainLoop()
+    mainloop.run()

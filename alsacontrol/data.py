@@ -27,6 +27,7 @@ import pkg_resources
 
 
 def get_data_path():
+    """Depending on the installation prefix, return the data dir."""
     source_path = pkg_resources.require('alsacontrol')[0].location
 
     # depending on where this file is installed to, make sure to use the proper
