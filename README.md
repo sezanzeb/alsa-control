@@ -64,7 +64,6 @@ Quality
 - Show when the user is supposed to restart their applications for it to take effect
 - Make it easy to write GUIs for this in alternative libraries by properly separating code
 - Provide well written docstrings
-- Don't just grey out stuff, provide proper error messages and log outputs to debug problems
 - Don't automatically switch devices when the current device is not available. But maybe add user defined fallback devices
 - Be verbose with logs, provide debug logs. All logs start uppercase
 
