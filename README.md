@@ -49,15 +49,15 @@ sudo python3 setup.py install && python3 tests/test.py
 Basically provide everything that is needed to comfortably use ALSA in a GUI
 
 Features
-- ✅ Show a volume meter as notification on volume changes or mute toggling
-- ✅ Change the volume of soundcards without Master controls with softvol
-- ✅ Generate a asoundrc file that is automatically included in ~/.asoundrc based on config
-- Add a GUI slider and mute button for the volume of both input and output
-- Add button to test the speaker setup
-- Add a dropdown to change input and output pcm devices (which modifies softvols pcm device) and also make jack selectable if available
-- Notify about new detected audio devices with a button to open the GUI to select it
-- Input and output meter
-- Provide .deb files and get it into the AUR
+- [x] Show a volume meter as notification on volume changes or mute toggling
+- [x] Change the volume of soundcards without Master controls with softvol
+- [x] Generate a asoundrc file that is automatically included in ~/.asoundrc based on config
+- [ ] Add a GUI slider and mute button for the volume of both input and output
+- [ ] Add button to test the speaker setup
+- [ ] Add a dropdown to change input and output pcm devices (which modifies softvols pcm device) and also make jack selectable if available
+- [ ] Notify about new detected audio devices with a button to open the GUI to select it
+- [ ] Input and output meter
+- [ ] Provide .deb files and get it into the AUR
 
 Quality
 - Provide tooltips for anything that is not easily self explanatory
