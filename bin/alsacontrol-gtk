@@ -18,19 +18,14 @@
 # You should have received a copy of the GNU General Public License
 # along with ALSA-Control.  If not, see <https://www.gnu.org/licenses/>.
 
+
 """User Interface."""
 
-from alsacontrol.bindings import initialize
+
+from alsacontrol.bindings import Bindings
 
 
 class GTKInterface:
     """User Interface."""
     def __init__(self):
-        pass
-
-
-class Notification:
-
-
-
-initialize()
+        self.bindings = Bindings()

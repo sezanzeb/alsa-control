@@ -23,6 +23,7 @@
 
 
 import logging
+import pkg_resources
 
 
 class Formatter(logging.Formatter):
@@ -59,6 +60,14 @@ handler = logging.StreamHandler()
 handler.setFormatter(Formatter())
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
+
+
+def log_info():
+    """Log version and name to the console"""
+    # read values from setup.py
+    version = pkg_resources.require('alsacontrol')[0].version
+    name = pkg_resources.require('alsacontrol')[0].project_name
+    logger.info('%s %s', version, name)
 
 
 def update_verbosity(debug):

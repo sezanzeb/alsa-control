@@ -19,7 +19,7 @@
 # along with ALSA-Control.  If not, see <https://www.gnu.org/licenses/>.
 
 
-"""Command line interface mainly to control the volume."""
+"""Command line interface to talk to the daemon."""
 
 
 import sys
@@ -35,21 +35,29 @@ parser.add_argument(
     default=False
 )
 parser.add_argument(
+    '-l', '--level', action='store_true', dest='level',
+    help='Get the current output level',
+    default=False
+)
+parser.add_argument(
     '-m', '--toggle-mute', action='store_true', dest='toggle_mute',
     help='Will mute/unmute the output',
     default=False
 )
 options = parser.parse_args(sys.argv[1:])
 
-bus = dbus.SessionBus()
-remote_object = bus.get_object(
-    'com.alsacontrol.Volume',
-    '/'
-)
-interface = dbus.Interface(remote_object, 'com.alsacontrol.Interface')
+try:
+    bus = dbus.SessionBus()
+    remote_object = bus.get_object(
+        'com.alsacontrol.Volume',
+        '/'
+    )
+    interface = dbus.Interface(remote_object, 'com.alsacontrol.Interface')
+except dbus.exceptions.DBusException:
+    print('Could not connect to the ALSA-Control Daemon. Is it running?')
+    raise SystemExit(1)
 
 if options.volume:
-    print(int(options.volume))
     interface.change_volume(int(options.volume) / 100)
 
 if options.toggle_mute:

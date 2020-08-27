@@ -22,11 +22,30 @@
 """Helperfunctions to talk to alsa and further simplify pyalsaaudio."""
 
 
+import time
+import re
+
+import numpy as np
+
 import alsaaudio
 from alsacontrol.logger import logger
 
 
 EXP = 3
+
+
+def get_level():
+    """Get the current level of recording."""
+    # defaults to 2 channels and 16 bit on the default device
+    pcm = alsaaudio.PCM(type=alsaaudio.PCM_CAPTURE)
+
+    while True:
+        length, data = pcm.read()
+        if length > 0:
+            samples = np.frombuffer(data, dtype=np.int16)
+            level = np.max(np.abs(samples))
+            # in percent
+            return level / ((2 ** 16) / 2)
 
 
 def get_sysdefault(pcm_type):

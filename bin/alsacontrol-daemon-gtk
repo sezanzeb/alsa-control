@@ -36,9 +36,8 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Notify, GLib
 
 from alsacontrol.asoundrc import setup
-from alsacontrol.logger import logger, update_verbosity
+from alsacontrol.logger import logger, update_verbosity, log_info
 from alsacontrol.alsa import set_volume, get_volume, toggle_mute, is_muted
-from alsacontrol.bindings import print_info
 
 
 Notify.init('ALSA-Control')
@@ -174,7 +173,7 @@ if __name__ == '__main__':
     options = parser.parse_args(sys.argv[1:])
     update_verbosity(options.debug)
 
-    print_info()
+    log_info()
 
     setup()
 

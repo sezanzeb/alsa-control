@@ -24,17 +24,9 @@
 
 import sys
 from argparse import ArgumentParser
-import pkg_resources
-
-from alsacontrol.logger import logger, update_verbosity
 
 
-def print_info():
-    """Log version and name to the console"""
-    # read values from setup.py
-    version = pkg_resources.require('alsacontrol')[0].version
-    name = pkg_resources.require('alsacontrol')[0].project_name
-    logger.info('%s %s', version, name)
+from alsacontrol.logger import logger, update_verbosity, log_info
 
 
 class Bindings:
@@ -50,4 +42,4 @@ class Bindings:
 
         options = parser.parse_args(sys.argv[1:])
         update_verbosity(options.debug)
-        print_info()
+        log_info()
