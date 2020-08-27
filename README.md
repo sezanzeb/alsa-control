@@ -51,7 +51,7 @@ Basically provide everything that is needed to comfortably use ALSA in a GUI
 Features
 - [x] Show a volume meter as notification on volume changes or mute toggling
 - [x] Change the volume of soundcards without Master controls with softvol
-- [x] Generate a asoundrc file that is automatically included in ~/.asoundrc based on config
+- [x] Generate an asoundrc file that is automatically included in ~/.asoundrc based on config
 - [ ] Add a GUI slider and mute button for the volume of both input and output
 - [ ] Add button to test the speaker setup
 - [ ] Add a dropdown to change input and output pcm devices (which modifies softvols pcm device) and also make jack selectable if available
