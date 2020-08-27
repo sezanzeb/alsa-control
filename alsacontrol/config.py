@@ -88,7 +88,6 @@ class Config:
                 line = line.strip()
                 if not line.startswith('#'):
                     split = line.split('=', 1)
-                    print('#', line, '#', split)
                     if len(split) == 2:
                         key = split[0]
                         value = split[1]
@@ -110,7 +109,6 @@ class Config:
 
             with open(self._path, 'r+') as config_file:
                 config_contents = config_file.read()
-                print(1, config_contents)
                 config_contents = _modify_config(config_contents, key, value)
 
             # overwrite completely

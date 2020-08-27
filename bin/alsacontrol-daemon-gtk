@@ -29,64 +29,108 @@ from dbus.mainloop.glib import DBusGMainLoop
 import dbus.mainloop.glib
 from optparse import OptionParser
 
+gi.require_version('Notify', '0.7')
 gi.require_version('GLib', '2.0')
 gi.require_version('Gio', '2.0')
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gio, GLib, Gtk
+from gi.repository import Notify, Gio, GLib, Gtk
 
-from alsacontrol.asoundrc import setup
+from alsacontrol.asoundrc import setup, create_asoundrc
 from alsacontrol.logger import logger, update_verbosity
-
+from alsacontrol.alsa import set_volume, get_volume, toggle_mute, is_muted
 
 # TODO pylint mal alles
+Notify.init('ALSA-Control')
 
 
-Application = Gio.Application.new(
-    'alsacontrol.volume',
-    Gio.ApplicationFlags.FLAGS_NONE
-)
-Application.register()
-
-
-class Volume(service.Object):
+class Daemon(service.Object):
     """Waits for volume changes over alsacontrol and displays them.
 
     This needs to be done by a daemon, so that it can hold a state and
     replace the old notification with the outdated volume instead of
     stacking them.
     """
+    def __init__(self, *args, **kwargs):
+        self._notification_id = None
+        self.exponent = 3
+
+        # fine grained current mixer volume.
+        # alsamixer only provides a resolution of 100
+        # and softvol of 1048
+        self.perceived_volume = self.to_percieved_volume(get_volume())
+
+        super().__init__(*args, **kwargs)
+
+    def to_percieved_volume(self, volume):
+        """For a mixer volume of 0.5, figure out the perceived volume."""
+        return max(0, min(1, volume ** self.exponent))
+
+    def to_mixer_volume(self, volume):
+        """For a perceived volume of 0.5, figure out the mixers volume."""
+        return max(0, min(1, volume ** (1 / self.exponent)))
+
+    def show_notification(self, text, icon, hints):
+        """Display a notification in the GUI that replaces the old one.
+
+        If hints contains a 'value' key of type GLib.Variant.new_int32,
+        it will display a progress bar instead of text. Useful for volume.
+        """
+        notification = Notify.Notification.new('', text, icon)
+
+        if self._notification_id is not None:
+            notification.props.id = self._notification_id
+
+        for key in hints:
+            notification.set_hint(key, hints[key])
+
+        notification.show()
+        self._notification_id = notification.props.id
+
     @dbus.service.method(
         'com.alsacontrol.Interface',
-        in_signature='ib'
+        in_signature='d'
     )
-    def notify(self, volume, muted):
+    def change_volume(self, volume):
         """Show the specified volume in a desktop notification
 
         Parameters
         ----------
         volume : int
-            Absolute current volume between 0 and 100
-        muted : bool
-            True if no sound will play because the output is muted,
-            otherwise Fale
+            perceived volume change between -1 and +1
         """
+        logger.debug('Received volume change of %s', volume)
+        perceived_new = max(0, min(1, self.perceived_volume + volume))
+        mixer_new = self.to_mixer_volume(perceived_new)
+        self.perceived_volume = perceived_new
+        set_volume(mixer_new)
+        self.notify(perceived_new, is_muted())
+
+    @dbus.service.method(
+        'com.alsacontrol.Interface'
+    )
+    def toggle_muted(self):
+        """Mute if unmuted, unmute if muted."""
+        logger.debug('Received command to toggle mute')
+        muted = toggle_mute()
+        self.notify(self.perceived_volume, muted)
+
+    def notify(self, volume, muted):
         # various icons to visualize the volume
         if muted or volume <= 0:
             icon = 'audio-volume-muted'
-        elif volume < 33:
+        elif volume < 0.33:
             icon = 'audio-volume-low'
-        elif volume < 66:
+        elif volume < 0.66:
             icon = 'audio-volume-medium'
         else:
             icon = 'audio-volume-high'
 
-        volume_string = '{}%'.format(volume)
+        volume_string = '{}%'.format(int(volume * 100))
 
-        notification = Gio.Notification.new('')
-        notification.set_body(volume_string)
-        notification.set_icon(Gio.ThemedIcon.new(icon))
-        # provide the application_id in order to replace any existing note
-        Application.send_notification('alsacontrol.volume', notification)
+        self.show_notification(volume_string, icon, {
+            'value': GLib.Variant.new_int32(volume * 100)
+        })
+
         muted = 'muted' if muted else 'unmuted'
         logger.info('Changing the volume to %s, %s', volume_string, muted)
 
@@ -106,7 +150,7 @@ setup()
 # make sure our .asoundrc is included so that the mixer name exists
 session_bus = dbus.SessionBus(mainloop=DBusGMainLoop())
 name = dbus.service.BusName('com.alsacontrol.Volume', session_bus)
-Volume(session_bus, '/')
+Daemon(session_bus, '/')
 
 mainloop = GLib.MainLoop()
 mainloop.run()

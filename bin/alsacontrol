@@ -26,31 +26,11 @@ import sys
 import dbus
 from optparse import OptionParser
 
-from alsacontrol.asoundrc import create_asoundrc
-from alsacontrol.alsa import change_volume, get_volume, toggle_mute, is_muted
-from alsacontrol.logger import update_verbosity
-
 
 parser = OptionParser()
 parser.add_option(
-    '-d', '--debug', action='store_true', dest='debug',
-    help='Displays additional debug information',
-    default=False
-)
-parser.add_option(
-    '-c', '--configure', action='store_true', dest='configure',
-    help=(
-        'Load the configuration file at ~/.config/alsacontrol'
-        'and setup ~/.asoundrc'
-    ),
-    default=False
-)
-parser.add_option(
     '-v', '--volume', action='store', dest='volume',
-    help=(
-        'For example "10+" or "10-" for relative volumes, '
-        'or "50" for an absolute Volume.'
-    ),
+    help='Between -100 and 100',
     default=False
 )
 parser.add_option(
@@ -60,8 +40,6 @@ parser.add_option(
 )
 (options, args) = parser.parse_args(sys.argv[1:])
 
-update_verbosity(options.debug)
-
 bus = dbus.SessionBus()
 remote_object = bus.get_object(
     'com.alsacontrol.Volume',
@@ -70,15 +48,8 @@ remote_object = bus.get_object(
 interface = dbus.Interface(remote_object, 'com.alsacontrol.Interface')
 
 if options.volume:
-    muted = is_muted()
-    new_volume = change_volume(options.volume)
-    interface.notify(new_volume, muted)
+    print(int(options.volume))
+    interface.change_volume(int(options.volume) / 100)
 
 if options.toggle_mute:
-    muted = toggle_mute()
-    volume = get_volume()
-    interface.notify(volume, muted)
-
-if options.configure:
-    # configure .asoundrc based on ~/.config/alsacontrol and leave
-    create_asoundrc()
+    interface.toggle_muted()

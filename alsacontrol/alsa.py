@@ -22,20 +22,25 @@
 """Helperfunctions to talk to alsa and further simplify pyalsaaudio."""
 
 
-import time
+import re
+import subprocess
 
 import alsaaudio
+from alsacontrol.logger import logger
 
 
-def get_sysdefault(type):
+EXP = 3
+
+
+def get_sysdefault(pcm_type):
     """Of a list of pcm devices, return the one being the sysdefault or null.
 
     Parameters
     ----------
-    type : string
+    pcm_type : string
         one of alsaaudio.PCM_CAPTURE or alsaaudio.PCM_PLAYBACK
     """
-    pcm_list = alsaaudio.pcms(type)
+    pcm_list = alsaaudio.pcms(pcm_type)
     for pcm in pcm_list:
         if pcm.startswith('sysdefault:'):
             return pcm
@@ -43,39 +48,25 @@ def get_sysdefault(type):
         return 'null'
 
 
-def change_volume(volume):
-    """Change the current output volume.
-
-    Doesn't return the mixer volume, but rather the volume before a non-linear
-    function is applied,
+def set_volume(volume):
+    """Change the mixer volume.
 
     Parameters
     ----------
-    volume : int
-        Relative change. Between -100 and 100
+    volume : float
+        New value between 0 and 1
     """
-    print('change_volume')
-    volume = int(volume)
+    mixer_volume = min(100, max(0, round(volume * 100)))
+    logger.debug('setting the mixer value to %s%%', mixer_volume)
     mixer = alsaaudio.Mixer('alsacontrol-output-volume')
-    current_volume = mixer.getvolume()[0]
-
-    exp = 3
-
-    current_volume_linear = (current_volume / 100)**exp
-    new_volume_linear = current_volume_linear + (volume / 100)
-    new_volume_linear = min(1, max(0, new_volume_linear))
-
-    new_volume = (new_volume_linear**(1 / exp)) * 100
-    new_volume = min(100, max(0, int(new_volume)))
-
-    mixer.setvolume(new_volume)
-    return new_volume_linear * 100
+    mixer.setvolume(mixer_volume)
 
 
 def get_volume():
-    """Get the current output volume."""
+    """Get the current mixer volume between 0 and 1."""
     mixer = alsaaudio.Mixer('alsacontrol-output-volume')
-    return mixer.getvolume()[0]
+    mixer_volume = mixer.getvolume(alsaaudio.PCM_PLAYBACK)[0]
+    return mixer_volume / 100
 
 
 def toggle_mute():
