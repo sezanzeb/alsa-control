@@ -30,9 +30,6 @@ pcm.alsacontrol-output {{
             name alsacontrol-output-volume
             card 0
         }}
-        # 1024 was the maximum resolution that worked for me
-        # without being "invalid"
-        resolution 1024
     }}
     control {{
         name alsacontrol-output-mute
