@@ -22,13 +22,16 @@
 """All GUI events call this module, independent from the used toolkit."""
 
 
+import os
+import signal
+import subprocess
 import sys
 import time
 from argparse import ArgumentParser
 
 import alsaaudio
 
-from alsacontrol.alsa import set_volume, to_mixer_volume
+from alsacontrol.alsa import get_num_output_channels
 from alsacontrol.logger import logger, update_verbosity, log_info
 
 
@@ -77,3 +80,31 @@ class Bindings:
         log_info()
 
         self.output_volume = 0
+        self.speaker_test_pid = None
+
+    def toggle_speaker_test(self):
+        """Run the speaker-test script or stop it, if it is running.
+
+        Returns True if it is run, False if it has been stopped.
+        """
+        if self.speaker_test_pid is None:
+            num_channels = get_num_output_channels()
+            cmd = 'speaker-test -D default -c {} -twav'.format(num_channels)
+            logger.info('Testing speakers, %d channels', num_channels)
+            process = subprocess.Popen(
+                cmd,
+                shell=True,
+                preexec_fn=os.setsid
+            )
+            self.speaker_test_pid = process.pid
+            return True
+
+        self.stop_speaker_test()
+        return False
+
+    def stop_speaker_test(self):
+        """Stop the speaker test if it is running."""
+        if self.speaker_test_pid is not None:
+            logger.info('Stopping speaker test')
+            os.killpg(os.getpgid(self.speaker_test_pid), signal.SIGTERM)
+            self.speaker_test_pid = None

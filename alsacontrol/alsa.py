@@ -44,6 +44,13 @@ def to_mixer_volume(volume):
     return max(0, min(1, volume ** (1 / 2)))
 
 
+def get_num_output_channels():
+    """Get the number of channels."""
+    # TODO everything has only been tested with stereo so far
+    mixer = alsaaudio.Mixer(OUTPUT_MUTE)
+    return len(mixer.getmute())
+
+
 def get_level():
     """Get the current level of recording."""
     # defaults to 2 channels and 16 bit on the default device

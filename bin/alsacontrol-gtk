@@ -29,8 +29,7 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
-from alsacontrol.alsa import get_volume, to_perceived_volume, set_volume, \
-    toggle_mute, is_muted
+from alsacontrol.alsa import get_volume, set_volume, toggle_mute, is_muted
 from alsacontrol.bindings import Bindings, get_volume_string, get_volume_icon
 from alsacontrol.data import get_data_path
 
@@ -64,8 +63,8 @@ class ALSAControlWindow:
         input_volume = get_volume(alsaaudio.PCM_CAPTURE, nonlinear=True)
         input_slider.set_value(input_volume)
 
-    def output_volume_change(self, gtk_range):
-        """The volume slider in the "Output Debice" tab was dragged."""
+    def on_output_volume_change(self, gtk_range):
+        """The volume slider in the "Output Device" tab was dragged."""
         muted = is_muted()
         volume = gtk_range.get_value()
         self.refresh_output_state(volume, muted)
@@ -77,6 +76,14 @@ class ALSAControlWindow:
         volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True)
         self.refresh_output_state(volume, muted)
 
+    def on_test_speaker_clicked(self, button):
+        """Test the speaker setup by playing sounds."""
+        test_running = self.bindings.toggle_speaker_test()
+        if test_running:
+            button.set_label('Stop Test')
+        else:
+            button.set_label('Test Speaker')
+
     def refresh_output_state(self, volume, muted):
         """Refresh icons and labels depending on mute and volume state"""
         volume_string = get_volume_string(volume, muted)
@@ -87,6 +94,10 @@ class ALSAControlWindow:
         volume_image = self.builder.get_object('output_volume_icon')
         volume_image.set_from_icon_name(volume_icon_name, Gtk.IconSize.BUTTON)
 
+    def on_close(self, *_):
+        """Safely close the application."""
+        self.bindings.stop_speaker_test()
+        Gtk.main_quit()
 
 if __name__ == '__main__':
     ALSAControlWindow()
