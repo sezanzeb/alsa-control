@@ -75,10 +75,12 @@ def check_asoundrc():
 
 def create_asoundrc():
     """Create and populate ~/.config/alsacontrol/asoundrc."""
-    input_softvol = False
-    pcm_input = get_config().get('pcm_input', 'null')
-
+    # support for setting this to False is not yet given!
+    # the mixer names from asoundrc-template are used everywhere
+    input_softvol = True
     output_softvol = True
+
+    pcm_input = get_config().get('pcm_input', 'null')
     pcm_output = get_config().get('pcm_output', 'null')
 
     if pcm_input is None:

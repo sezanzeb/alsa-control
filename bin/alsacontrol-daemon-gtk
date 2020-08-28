@@ -25,19 +25,20 @@
 import sys
 from argparse import ArgumentParser
 
+import alsaaudio
 from dbus import service
 from dbus.mainloop.glib import DBusGMainLoop
 import dbus.mainloop.glib
 import gi
 gi.require_version('Notify', '0.7')
 gi.require_version('GLib', '2.0')
-gi.require_version('Gio', '2.0')
-gi.require_version('Gtk', '3.0')
 from gi.repository import Notify, GLib
 
 from alsacontrol.asoundrc import setup
 from alsacontrol.logger import logger, update_verbosity, log_info
-from alsacontrol.alsa import set_volume, get_volume, toggle_mute, is_muted
+from alsacontrol.alsa import set_volume, get_volume, toggle_mute,\
+    is_muted, to_perceived_volume
+from alsacontrol.bindings import get_volume_icon
 
 
 Notify.init('ALSA-Control')
@@ -52,14 +53,13 @@ class Daemon(service.Object):
     """
     def __init__(self, *args, **kwargs):
         self._notification_id = None
-        self.exponent = 3
 
         # fine grained current mixer volume to better convert from linear
         # to perceived volume without having to worry about rounding.
         # Especially going down by 10% and up by 10% should end up at the
         # initial volume.
         # alsamixer only provides a resolution of 100 and softvol of max 1048
-        self.perceived_volume = self.to_perceived_volume(get_volume())
+        self.perceived_volume = to_perceived_volume(get_volume())
 
         super().__init__(*args, **kwargs)
 
@@ -74,15 +74,9 @@ class Daemon(service.Object):
                 expected_mixer_volume,
                 actual_mixer_volume
             )
-            self.perceived_volume = self.to_perceived_volume(get_volume())
-
-    def to_perceived_volume(self, volume):
-        """For a mixer volume of 0.5, figure out the perceived volume."""
-        return max(0, min(1, volume ** self.exponent))
-
-    def to_mixer_volume(self, volume):
-        """For a perceived volume of 0.5, figure out the mixers volume."""
-        return max(0, min(1, volume ** (1 / self.exponent)))
+            self.perceived_volume = to_perceived_volume(
+                get_volume()
+            )
 
     def show_notification(self, text, icon, hints, short=False):
         """Display a notification in the GUI that replaces the old one.
@@ -129,7 +123,7 @@ class Daemon(service.Object):
         perceived_new = max(0, min(1, self.perceived_volume + volume))
         mixer_new = self.to_mixer_volume(perceived_new)
         self.perceived_volume = perceived_new
-        set_volume(mixer_new)
+        set_volume(mixer_new, alsaaudio.PCM_PLAYBACK)
         self.notify(perceived_new, is_muted())
 
     @dbus.service.method(
@@ -144,14 +138,7 @@ class Daemon(service.Object):
     def notify(self, volume, muted):
         """Display a pretty notification for volume and mute state."""
         # various icons to visualize the volume
-        if muted or volume <= 0:
-            icon = 'audio-volume-muted'
-        elif volume < 0.33:
-            icon = 'audio-volume-low'
-        elif volume < 0.66:
-            icon = 'audio-volume-medium'
-        else:
-            icon = 'audio-volume-high'
+        get_volume_icon(volume, muted)
 
         volume_string = '{}%'.format(int(volume * 100))
 

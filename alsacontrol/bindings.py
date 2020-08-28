@@ -23,10 +23,42 @@
 
 
 import sys
+import time
 from argparse import ArgumentParser
 
+import alsaaudio
 
+from alsacontrol.alsa import set_volume, to_mixer_volume
 from alsacontrol.logger import logger, update_verbosity, log_info
+
+
+def get_volume_icon(volume, muted):
+    """Return an icon name for use in GUIs.
+
+    Parameters
+    ----------
+    volume : float
+        between 0 and 1.
+    muted : bool
+        True, if no sound plays currently.
+    """
+    if muted or volume <= 0:
+        icon = 'audio-volume-muted'
+    elif volume < 0.5:
+        icon = 'audio-volume-low'
+    elif volume < 1.0:
+        icon = 'audio-volume-medium'
+    else:
+        icon = 'audio-volume-high'
+    return icon
+
+
+def get_volume_string(volume, muted):
+    """Return a string representing the current output state."""
+    if not muted:
+        return '{}%'.format(round(volume * 100))
+    else:
+        return 'muted'
 
 
 class Bindings:
@@ -43,3 +75,5 @@ class Bindings:
         options = parser.parse_args(sys.argv[1:])
         update_verbosity(options.debug)
         log_info()
+
+        self.output_volume = 0

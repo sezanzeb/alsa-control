@@ -22,10 +22,71 @@
 """User Interface."""
 
 
-from alsacontrol.bindings import Bindings
+import os
+
+import alsaaudio
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk
+
+from alsacontrol.alsa import get_volume, to_perceived_volume, set_volume, \
+    toggle_mute, is_muted
+from alsacontrol.bindings import Bindings, get_volume_string, get_volume_icon
+from alsacontrol.data import get_data_path
 
 
-class GTKInterface:
+class ALSAControlWindow:
     """User Interface."""
     def __init__(self):
         self.bindings = Bindings()
+
+        gladefile = os.path.join(get_data_path(), 'alsacontrol.glade')
+        builder = Gtk.Builder()
+        builder.add_from_file(gladefile)
+        builder.connect_signals(self)
+        self.builder = builder
+
+        self.initialize_volume_slider()
+
+        window = builder.get_object('alsacontrol_window')
+        window.show_all()
+
+        Gtk.main()
+
+    def initialize_volume_slider(self):
+        """Reflect the current volume."""
+        # this will trigger output_volume_change
+        output_slider = self.builder.get_object('output_volume_slider_scale')
+        output_volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True)
+        output_slider.set_value(output_volume)
+
+        input_slider = self.builder.get_object('input_volume_slider_scale')
+        input_volume = get_volume(alsaaudio.PCM_CAPTURE, nonlinear=True)
+        input_slider.set_value(input_volume)
+
+    def output_volume_change(self, gtk_range):
+        """The volume slider in the "Output Debice" tab was dragged."""
+        muted = is_muted()
+        volume = gtk_range.get_value()
+        self.refresh_output_state(volume, muted)
+        set_volume(volume, alsaaudio.PCM_PLAYBACK, nonlinear=True)
+
+    def on_mute_output_pressed(self, _):
+        """The mute button was pressed."""
+        muted = toggle_mute()
+        volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True)
+        self.refresh_output_state(volume, muted)
+
+    def refresh_output_state(self, volume, muted):
+        """Refresh icons and labels depending on mute and volume state"""
+        volume_string = get_volume_string(volume, muted)
+        volume_label = self.builder.get_object('output_volume_current')
+        volume_label.set_label(volume_string)
+
+        volume_icon_name = get_volume_icon(volume, muted)
+        volume_image = self.builder.get_object('output_volume_icon')
+        volume_image.set_from_icon_name(volume_icon_name, Gtk.IconSize.BUTTON)
+
+
+if __name__ == '__main__':
+    ALSAControlWindow()

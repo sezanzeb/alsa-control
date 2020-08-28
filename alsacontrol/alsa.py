@@ -22,16 +22,26 @@
 """Helperfunctions to talk to alsa and further simplify pyalsaaudio."""
 
 
-import time
-import re
-
 import numpy as np
 
 import alsaaudio
 from alsacontrol.logger import logger
 
 
-EXP = 3
+INPUT_VOLUME = 'alsacontrol-input-volume'
+INPUT_MUTE = 'alsacontrol-input-mute'
+OUTPUT_VOLUME = 'alsacontrol-output-volume'
+OUTPUT_MUTE = 'alsacontrol-output-mute'
+
+
+def to_perceived_volume(volume):
+    """For a mixer volume of 0.5, figure out the perceived volume."""
+    return max(0, min(1, volume ** 2))
+
+
+def to_mixer_volume(volume):
+    """For a perceived volume of 0.5, figure out the mixers volume."""
+    return max(0, min(1, volume ** (1 / 2)))
 
 
 def get_level():
@@ -63,30 +73,70 @@ def get_sysdefault(pcm_type):
     return 'null'
 
 
-def set_volume(volume):
+def set_volume(volume, pcm, nonlinear=False):
     """Change the mixer volume.
 
     Parameters
     ----------
     volume : float
         New value between 0 and 1
+    pcm : int
+        0 for output (PCM_PLAYBACK), 1 for input (PCM_CAPTURE)
+    nonlinear : bool
+        if True, will apply to_mixer_volume
     """
+    if pcm == alsaaudio.PCM_PLAYBACK:
+        mixer_name = OUTPUT_VOLUME
+    elif pcm == alsaaudio.PCM_CAPTURE:
+        mixer_name = INPUT_VOLUME
+    else:
+        raise ValueError('unsupported pcm {}'.format(pcm))
+
+    if nonlinear:
+        volume = to_mixer_volume(volume)
+
     mixer_volume = min(100, max(0, round(volume * 100)))
-    logger.debug('setting the mixer value to %s%%', mixer_volume)
-    mixer = alsaaudio.Mixer('alsacontrol-output-volume')
+    logger.debug('setting the "%s" value to %s%%', mixer_name, mixer_volume)
+    mixer = alsaaudio.Mixer(mixer_name)
     mixer.setvolume(mixer_volume)
 
 
-def get_volume():
-    """Get the current mixer volume between 0 and 1."""
-    mixer = alsaaudio.Mixer('alsacontrol-output-volume')
-    mixer_volume = mixer.getvolume(alsaaudio.PCM_PLAYBACK)[0]
-    return mixer_volume / 100
+def get_volume(pcm, nonlinear=False):
+    """Get the current mixer volume between 0 and 1.
+
+    Parameters
+    ----------
+    pcm : int
+        0 for output (PCM_PLAYBACK), 1 for input (PCM_CAPTURE)
+    nonlinear : bool
+        if True, will apply to_perceived_volume
+    """
+    if pcm == alsaaudio.PCM_PLAYBACK:
+        mixer_name = OUTPUT_VOLUME
+    elif pcm == alsaaudio.PCM_CAPTURE:
+        mixer_name = INPUT_VOLUME
+    else:
+        raise ValueError('unsupported pcm {}'.format(pcm))
+
+    if mixer_name not in alsaaudio.mixers():
+        logger.warning('Could not find mixer %s', mixer_name)
+        return 0
+
+    # TODO in order for the input mixer to be known, it seems like some sound
+    #  needs to be captured, similar to I need to run the alsa test to
+    #  see the output-volume mixer
+    mixer = alsaaudio.Mixer(mixer_name)
+    mixer_volume = mixer.getvolume(pcm)[0] / 100
+
+    if nonlinear:
+        return to_perceived_volume(mixer_volume)
+
+    return mixer_volume
 
 
 def toggle_mute():
     """Mute or unmute."""
-    mixer = alsaaudio.Mixer('alsacontrol-output-mute')
+    mixer = alsaaudio.Mixer(OUTPUT_MUTE)
     if mixer.getmute()[0]:
         mixer.setmute(0)
         return False
@@ -96,5 +146,5 @@ def toggle_mute():
 
 def is_muted():
     """Figure out if the output is muted or not."""
-    mixer = alsaaudio.Mixer('alsacontrol-output-mute')
+    mixer = alsaaudio.Mixer(OUTPUT_MUTE)
     return mixer.getmute()[0] == 1

@@ -26,8 +26,8 @@ alsacontrol-daemon-gtk
 Change the volume. For convenience, bind this to your multimedia keys in your user interface
 
 ```
-alsacontrol -v +10
-alsacontrol -v -10
+alsacontrol -v +5
+alsacontrol -v -5
 alsacontrol -m
 ```
 
