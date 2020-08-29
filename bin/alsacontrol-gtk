@@ -391,5 +391,4 @@ class ALSAControlWindow:
 if __name__ == '__main__':
     setup_asoundrc()
     ALSAControlWindow()
-    mainloop = GLib.MainLoop()
-    mainloop.run()
+    Gtk.main()
