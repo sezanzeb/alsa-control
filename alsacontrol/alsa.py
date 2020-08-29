@@ -110,31 +110,37 @@ def get_cards(pcm_type):
     return cards
 
 
-def set_volume(volume, pcm, nonlinear=False):
+def set_volume(volume, pcm_type, nonlinear=False):
     """Change the mixer volume.
 
     Parameters
     ----------
     volume : float
         New value between 0 and 1
-    pcm : int
+    pcm_type : int
         0 for output (PCM_PLAYBACK), 1 for input (PCM_CAPTURE)
     nonlinear : bool
         if True, will apply to_mixer_volume
     """
-    if pcm == alsaaudio.PCM_PLAYBACK:
+    if pcm_type == alsaaudio.PCM_PLAYBACK:
         mixer_name = OUTPUT_VOLUME
-    elif pcm == alsaaudio.PCM_CAPTURE:
+    elif pcm_type == alsaaudio.PCM_CAPTURE:
         mixer_name = INPUT_VOLUME
     else:
-        raise ValueError('Unsupported PCM {}'.format(pcm))
+        raise ValueError('Unsupported PCM {}'.format(pcm_type))
 
     if nonlinear:
         volume = to_mixer_volume(volume)
 
     mixer_volume = min(100, max(0, round(volume * 100)))
-    logger.debug('Setting the "%s" value to %s%%', mixer_name, mixer_volume)
+
     mixer = alsaaudio.Mixer(mixer_name)
+
+    current_mixer_volume = mixer.getvolume(pcm_type)[0]
+    if mixer_volume == current_mixer_volume:
+        return
+
+    logger.debug('Setting the "%s" value to %s%%', mixer_name, mixer_volume)
     mixer.setvolume(mixer_volume)
 
 

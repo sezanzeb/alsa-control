@@ -117,22 +117,16 @@ class ALSAControlWindow:
     def initialize_volume_slider(self):
         """Reflect the current volume."""
         output_slider = self.builder.get_object('output_volume_slider_scale')
-        with HandlerDisabled(
-                output_slider,
-                'value-changed',
-                self.on_output_volume_change
-        ):
-            output_volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True)
-            output_slider.set_value(output_volume)
+        output_volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True)
+        output_slider.set_value(output_volume)
 
         input_slider = self.builder.get_object('input_volume_slider_scale')
-        with HandlerDisabled(
-                input_slider,
-                'value-changed',
-                self.on_input_volume_change
-        ):
-            input_volume = get_volume(alsaaudio.PCM_CAPTURE, nonlinear=True)
-            input_slider.set_value(input_volume)
+        input_volume = get_volume(alsaaudio.PCM_CAPTURE, nonlinear=True)
+        input_slider.set_value(input_volume)
+
+        muted = is_muted()
+        volume = output_slider.get_value()
+        self.refresh_output_state(volume, muted)
 
     def on_switch_page(self, notebook, page, page_num):
         page_name = page.get_name()
@@ -201,6 +195,7 @@ class ALSAControlWindow:
 
     def on_output_volume_change(self, gtk_range):
         """Handler when the output volume slider was dragged."""
+        print('on_output_volume_change')
         muted = is_muted()
         volume = gtk_range.get_value()
         self.refresh_output_state(volume, muted)
@@ -282,13 +277,13 @@ class ALSAControlWindow:
                 spacing=10
             )
             box.pack_start(
+                select_button, expand=False, fill=True, padding=0
+            )
+            box.pack_start(
                 pcm_name, expand=True, fill=True, padding=0
             )
             box.pack_start(
                 level, expand=False, fill=False, padding=0
-            )
-            box.pack_start(
-                select_button, expand=False, fill=True, padding=0
             )
             box.set_margin_start(10)
             box.set_margin_end(22)
