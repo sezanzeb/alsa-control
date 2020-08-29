@@ -66,12 +66,12 @@ Features
 - [x] Change the volume of soundcards without Master controls with softvol
 - [x] Generate an asoundrc file that is automatically included in ~/.asoundrc based on config
 - [x] Add GTK GUI
-- [ ] Control volumes with sliders and a mute button
+- [x] Control volumes with sliders and a mute button
 - [x] Always show up to date devices in the GUI
 - [x] Add a button to test the speaker setup
 - [x] Show speaker-test errors in the GUI
 - [x] Add a dropdown to change output pcm devices
-- [ ] Jack support
+- [x] Jack support
 - [ ] Add a list of input devices and show their input level
 - [ ] Notify about new detected audio devices with a button to open the GUI to select it
 - [ ] Provide .deb files and get it into the AUR
