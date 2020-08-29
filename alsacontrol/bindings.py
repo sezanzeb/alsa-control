@@ -269,7 +269,6 @@ class Bindings:
 
     def stop_speaker_test(self):
         """Stop the speaker test if it is running."""
-        print('stop_speaker_test')
         if self.speaker_test_process is None:
             return False
 

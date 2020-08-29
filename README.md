@@ -1,6 +1,6 @@
 # ALSA Control
 
-**This is in a very early stage of development!**
+**This is in a beta state!**
 
 Making ALSA easy to use.
 
@@ -72,7 +72,7 @@ Features
 - [x] Show speaker-test errors in the GUI
 - [x] Add a dropdown to change output pcm devices
 - [x] Jack support
-- [ ] Add a list of input devices and show their input level
+- [x] Add a list of input devices and show their input level
 - [ ] Notify about new detected audio devices with a button to open the GUI to select it
 - [ ] Provide .deb files and get it into the AUR
 

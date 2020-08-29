@@ -44,11 +44,9 @@ def to_mixer_volume(volume):
     return max(0, min(1, volume ** (1 / 2)))
 
 
-def get_level():
+def get_level(pcm):
     """Get the current level of recording."""
     # defaults to 2 channels and 16 bit on the default card
-    pcm = alsaaudio.PCM(type=alsaaudio.PCM_CAPTURE)
-
     while True:
         length, data = pcm.read()
         if length > 0:

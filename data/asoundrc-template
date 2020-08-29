@@ -36,6 +36,15 @@ pcm.alsacontrol-plug {{
     slave.pcm "{output_pcm}"
 }}
 
+# used so that multiple apps can record from that device
+pcm.alsacontrol-dsnoop {{
+    type dsnoop
+    ipc_key 34376432  # some made up value
+    slave {{
+        pcm "{input_pcm}"
+    }}
+}}
+
 pcm.alsacontrol-output-softvol {{
     type softvol
     slave.pcm {{
