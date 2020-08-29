@@ -29,6 +29,8 @@ pcm.alsacontrol-dmix {{
 }}
 
 # used for jack
+# This could also be used for sysdefault pcms, but that doesn't seem
+# to support more channels than 2, hence dmix above is used.
 pcm.alsacontrol-plug {{
     type plug
     slave.pcm "{output_pcm}"
@@ -51,28 +53,24 @@ pcm.alsacontrol-output-softvol {{
     resolution 2
 }}
 
-pcm.alsacontrol-input {{
-    type dsnoop
-    ipc_key 46345624
+pcm.alsacontrol-input-softvol {{
+    type softvol
     slave.pcm {{
         type softvol
         slave.pcm {{
-            type softvol
-            slave.pcm {{
-                type plug
-                slave.pcm "{input_pcm_2}"
-            }}
-            control {{
-                name alsacontrol-input-volume
-                card 0
-            }}
+            type plug
+            slave.pcm "{input_pcm_softvol}"
         }}
         control {{
-            name alsacontrol-input-mute
+            name alsacontrol-input-volume
             card 0
         }}
-        resolution 2
     }}
+    control {{
+        name alsacontrol-input-mute
+        card 0
+    }}
+    resolution 2
 }}
 
 pcm.!default {{
@@ -83,6 +81,6 @@ pcm.!default {{
     }}
     capture.pcm {{
         type plug
-        slave.pcm "{input_pcm_1}"
+        slave.pcm "{input_pcm_asym}"
     }}
 }}

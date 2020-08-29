@@ -61,7 +61,7 @@ def get_volume_icon(volume, muted):
 def get_volume_string(volume, muted):
     """Return a string representing the current output state."""
     if not muted:
-        return '{}%'.format(round(volume * 100))
+        return f'{round(volume * 100)}%'
     else:
         return 'muted'
 
@@ -82,7 +82,7 @@ def get_error_advice(error):
     return None
 
 
-def select_pcm(card):
+def select_output_pcm(card):
     """Write this pcm to the configuration and generate asoundrc.
 
     Parameters
@@ -91,19 +91,30 @@ def select_pcm(card):
         "Generic", "jack", ...
     """
     # figure out if this is an actual hardware device or not
-    pcms = []
-    pcms += alsaaudio.pcms(alsaaudio.PCM_PLAYBACK)
-    pcms += alsaaudio.pcms(alsaaudio.PCM_CAPTURE)
-    hardware = False
+    pcms = alsaaudio.pcms(alsaaudio.PCM_PLAYBACK)
     for pcm in pcms:
         if card in pcm and ':CARD=' in pcm:
-            hardware = True
+            pcm_name = 'hw:CARD={}'.format(card)
             break
-    if hardware:
-        pcm_name = 'hw:CARD={}'.format(card)
     else:
         pcm_name = card
     get_config().set('pcm_output', pcm_name)
+    setup_asoundrc()
+
+
+def select_input_pcm(card):
+    """Write this pcm to the configuration and generate asoundrc.
+
+    Parameters
+    ----------
+    card : string
+        "Generic", "jack", ...
+    """
+    # figure out if this is an actual hardware device or not
+    pcms = alsaaudio.pcms(alsaaudio.PCM_CAPTURE)
+    match = filter(lambda pcm: f'sysdefault:CARD={card}' in pcm, pcms)
+    pcm_name = next(match, card)  # otherwise probably jack
+    get_config().set('pcm_input', pcm_name)
     setup_asoundrc()
 
 

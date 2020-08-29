@@ -167,7 +167,8 @@ def get_volume(pcm, nonlinear=False):
 
     # TODO in order for the input mixer to be known, it seems like some sound
     #  needs to be captured. I also need to run the alsa test to
-    #  see the output-volume mixer
+    #  see the output-volume mixer.
+    #  Arecord for a very short time? Calling get_level?
     mixer = alsaaudio.Mixer(mixer_name)
     mixer_volume = mixer.getvolume(pcm)[0] / 100
 

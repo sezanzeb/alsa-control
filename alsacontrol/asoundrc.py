@@ -92,12 +92,10 @@ def create_asoundrc():
         'output_pcm_asym': 'alsacontrol-output-softvol',
         'output_pcm_softvol': output_pcm_softvol,
         'output_pcm': pcm_output,
+        'output_channels': get_config().get('output_channels', 2),
 
-
-        'input_pcm_1': 'alsacontrol-input',
-        'input_pcm_2': pcm_input,
-        'output_pcm_2': pcm_output,
-        'output_channels': get_config().get('output_channels', 2)
+        'input_pcm_asym': 'alsacontrol-input-softvol',
+        'input_pcm_softvol': pcm_input,
     }
 
     template_path = os.path.join(get_data_path(), 'asoundrc-template')
