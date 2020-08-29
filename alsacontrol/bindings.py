@@ -30,9 +30,10 @@ from argparse import ArgumentParser
 
 import alsaaudio
 
-from alsacontrol.alsa import get_num_output_channels, get_devices, get_device
+from alsacontrol.alsa import get_num_output_channels, get_full_pcm_name
 from alsacontrol.logger import logger, update_verbosity, log_info
 from alsacontrol.config import get_config
+from alsacontrol.asoundrc import setup_asoundrc
 
 
 def get_volume_icon(volume, muted):
@@ -78,6 +79,23 @@ def get_error_advice(error):
             'Try to select something different.'
         )
     return None
+
+
+def select_pcm(device, output):
+    """Write this pcm to the configuration and generate asoundrc.
+
+    Parameters
+    ----------
+    device : string
+        "Generic", "jack", ...
+    output : string, None
+        "sysdefault", "front", etc.
+        If "" or None, will select the first possible pcm for that device.
+        For jack there are no output options, so "" or None work there.
+    """
+    pcm_name = get_full_pcm_name(device, output, alsaaudio.PCM_PLAYBACK)
+    get_config().set('pcm_output', pcm_name)
+    setup_asoundrc()
 
 
 class Bindings:

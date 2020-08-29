@@ -165,13 +165,16 @@ def get_full_pcm_name(device, output, pcm_type):
     device : string
         For example "Generic" or "HDMI"
     output : string
-        For example "front" or "sysdefault"
+        For example "front" or "sysdefault".
+        For jack "" or None work (because no output options exists)
     pcm_type : string
         one of alsaaudio.PCM_CAPTURE or alsaaudio.PCM_PLAYBACK
     """
     pcm_list = alsaaudio.pcms(pcm_type)
     for pcm in pcm_list:
-        if device in pcm and output in pcm:
+        if device in pcm and not output:
+            return pcm
+        if device in pcm and output and output in pcm:
             return pcm
     return None
 
