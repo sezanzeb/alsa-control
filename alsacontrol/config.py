@@ -26,7 +26,7 @@ import os
 import alsaaudio
 
 from alsacontrol.logger import logger
-from alsacontrol.alsa import get_sysdefault
+from alsacontrol.alsa import get_default_card
 
 
 def _modify_config(config_contents, key, value):
@@ -77,9 +77,9 @@ class Config:
             logger.info('Creating config file "%s"', self._path)
             os.mknod(self._path)
             # add all default values. Don't guess those values during
-            # operation to avoid suddenly changing the output device.
-            self.set('pcm_input', get_sysdefault(alsaaudio.PCM_CAPTURE))
-            self.set('pcm_output', get_sysdefault(alsaaudio.PCM_PLAYBACK))
+            # operation to avoid suddenly changing the output card.
+            self.set('pcm_input', get_default_card(alsaaudio.PCM_CAPTURE))
+            self.set('pcm_output', get_default_card(alsaaudio.PCM_PLAYBACK))
 
         # load config
         with open(self._path, 'r') as config_file:

@@ -30,8 +30,7 @@ from argparse import ArgumentParser
 
 import alsaaudio
 
-from alsacontrol.alsa import get_num_output_channels, get_full_pcm_name, \
-    get_devices, get_device, get_ports, get_port
+from alsacontrol.alsa import get_cards, get_card
 from alsacontrol.logger import logger, update_verbosity, log_info
 from alsacontrol.config import get_config
 from alsacontrol.asoundrc import setup_asoundrc
@@ -71,30 +70,38 @@ def get_error_advice(error):
     if 'resource busy' in error:
         return (
             'You can try to run `lsof | grep /dev/snd/` to '
-            'see which process is blocking it.'
+            'see which process is blocking it. It might be jack.'
         )
-    if 'No such device' in error:
+    if 'No such card' in error:
         pcm_output = get_config().get('pcm_output')
         return (
-            'The pcm device "{}" does not exist. '.format(pcm_output) +
+            'The pcm card "{}" does not exist. '.format(pcm_output) +
             'Try to select something different.'
         )
     return None
 
 
-def select_pcm(device, port):
+def select_pcm(card):
     """Write this pcm to the configuration and generate asoundrc.
 
     Parameters
     ----------
-    device : string
+    card : string
         "Generic", "jack", ...
-    port : string, None
-        "sysdefault", "front", etc.
-        If "" or None, will select the first possible pcm for that device.
-        For jack there are no output options, so "" or None work there.
     """
-    pcm_name = get_full_pcm_name(device, port, alsaaudio.PCM_PLAYBACK)
+    # figure out if this is an actual hardware device or not
+    pcms = []
+    pcms += alsaaudio.pcms(alsaaudio.PCM_PLAYBACK)
+    pcms += alsaaudio.pcms(alsaaudio.PCM_CAPTURE)
+    hardware = False
+    for pcm in pcms:
+        if card in pcm and ':CARD=' in pcm:
+            hardware = True
+            break
+    if hardware:
+        pcm_name = 'hw:CARD={}'.format(card)
+    else:
+        pcm_name = card
     get_config().set('pcm_output', pcm_name)
     setup_asoundrc()
 
@@ -104,33 +111,25 @@ def get_current_output():
 
     Returns
     -------
-    A tuple of (d, device, p, port) with d and p being the index in
-    the list of options from get_devices and get_ports.
+    A tuple of (d, card) with d being the index in
+    the list of options from get_cards.
     """
     pcm_output = get_config().get('pcm_output', None)
     if pcm_output is None:
-        return None, None, None, None
+        return None, None
 
-    devices = get_devices(alsaaudio.PCM_PLAYBACK)
-    if len(devices) == 0:
+    cards = get_cards(alsaaudio.PCM_PLAYBACK)
+    if len(cards) == 0:
         logger.error('Could not find any output pcm')
-        return
-    device = get_device(pcm_output)
-    if device not in devices:
-        logger.warning('Found unknown device %s in config', device)
-        return None, None, None, None
-    d = devices.index(device)
+        return None, None
 
-    ports = get_ports(device, alsaaudio.PCM_PLAYBACK)
-    port = get_port(pcm_output)
-    p = ports.index(port)
-    if port not in ports:
-        logger.warning(
-            'Found unknown port %s for device %s in config', port, device
-        )
-        return d, device, None, None
+    card = get_card(pcm_output)
+    if card not in cards:
+        logger.warning('Found unknown card %s in config', card)
+        return None, None
 
-    return d, device, p, port
+    d = cards.index(card)
+    return d, card
 
 
 class Bindings:
@@ -159,9 +158,8 @@ class Bindings:
         Returns the subprocess or False if it has been stopped.
         """
         if self.speaker_test_process is None:
-            pcm = get_config().get('pcm_output', None)
-            num_channels = get_num_output_channels(pcm)
-            cmd = 'speaker-test -D default -c {} -twav 2>&1'.format(num_channels)
+            num_channels = get_config().get('num_output_channels', 2)
+            cmd = 'speaker-test -D default -c {} -twav'.format(num_channels)
             logger.info('Testing speakers, %d channels', num_channels)
             process = subprocess.Popen(
                 cmd,
@@ -175,6 +173,18 @@ class Bindings:
 
         self.stop_speaker_test()
         return False
+
+    def read_from_std(self, source):
+        """Read all the contents from stderr or stdout of the speaker test."""
+        lines = []
+        while True:
+            line = source.readline()
+            if len(line) == 0:
+                break
+            line = line[:-1].decode()
+            if len(line) > 0:
+                lines.append(line)
+        return lines
 
     def check_speaker_test(self):
         """Return a tuple of (running, error) for the speaker test."""
@@ -190,19 +200,31 @@ class Bindings:
             if return_code != 0:
                 # speaker-test had an error, try to read it from its output
                 logger.error('speaker-test failed (code %d):', return_code)
-                lastline = None
-                while True:
-                    line = self.speaker_test_process.stdout.readline()
-                    if len(line) == 0:
-                        break
-                    line = line[:-1].decode()
-                    if len(line) > 0:
-                        logger.debug(line)
-                        lastline = line
-                if lastline is not None:
-                    logger.error(lastline)
+                msg = []
+
+                stderr = self.read_from_std(self.speaker_test_process.stderr)
+                stdout = self.read_from_std(self.speaker_test_process.stdout)
+
                 self.speaker_test_process = None
-                return False, lastline
+
+                if len(stderr) > 0:
+                    msg.append('Errors:')
+                    for line in stderr:
+                        logger.error('speaker-test stderr: %s', line)
+                        msg.append(line)
+
+                if len(stdout) > 0:
+                    msg += ['', 'Output:']
+                    for line in stdout:
+                        logger.error('speaker-test stdout: %s', line)
+                        msg.append(line)
+
+                if len(msg) == 0:
+                    msg = 'Unknown error. Exit code {}'.format(return_code)
+                else:
+                    msg = '\n'.join(msg)
+
+                return False, msg
 
             if return_code == 0:
                 self.speaker_test_process = None
@@ -215,6 +237,7 @@ class Bindings:
 
     def stop_speaker_test(self):
         """Stop the speaker test if it is running."""
+        print('stop_speaker_test')
         if self.speaker_test_process is None:
             return False
 
@@ -231,9 +254,10 @@ class Bindings:
                 )
                 # It has already been stopped
                 pass
+            self.speaker_test_process = None
 
     def log_new_pcms(self):
-        """Write to the console if new devices are added. Return True if so."""
+        """Write to the console if new cards are added. Return True if so."""
         inputs = set(alsaaudio.pcms(alsaaudio.PCM_CAPTURE))
         outputs = set(alsaaudio.pcms(alsaaudio.PCM_PLAYBACK))
         pcms = inputs.union(outputs)

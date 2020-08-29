@@ -18,18 +18,27 @@
 
 # This file will be overwritten, don't edit it by hand
 
-pcm.alsacontrol-output {{
+# used for hardware cards
+pcm.alsacontrol-dmix {{
+    type dmix
+    ipc_key 92882631  # some made up value
+    slave {{
+        pcm "{output_pcm}"
+        channels {output_channels}
+    }}
+}}
+
+# used for jack
+pcm.alsacontrol-plug {{
+    type plug
+    slave.pcm "{output_pcm}"
+}}
+
+pcm.alsacontrol-output-softvol {{
     type softvol
     slave.pcm {{
         type softvol
-        slave.pcm {{
-            type dmix
-            ipc_key 92882631
-            slave {{
-                pcm {output_pcm_2}
-                channels {output_channels}
-            }}
-        }}
+        slave.pcm "{output_pcm_softvol}"
         control {{
             name alsacontrol-output-volume
             card 0
@@ -70,7 +79,7 @@ pcm.!default {{
     type asym
     playback.pcm {{
         type plug
-        slave.pcm "{output_pcm_1}"
+        slave.pcm "{output_pcm_asym}"
     }}
     capture.pcm {{
         type plug

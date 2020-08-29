@@ -51,7 +51,7 @@ def add_include():
 
 def check_asoundrc():
     """If conflicting configurations exist in .asoundrc, throw a warning."""
-    # check if they change the default device
+    # check if they change the default card
     with open(os.path.expanduser('~/.asoundrc'), 'r') as file:
         for line in file:
             # get all uncommented lines
@@ -63,7 +63,7 @@ def check_asoundrc():
                     )
                 if 'pcm.!default' in line:
                     logger.warning(
-                        'already having a default device conflicts with '
+                        'already having a default card conflicts with '
                         'ALSA-Control'
                     )
                 if 'alsacontrol-' in line:
@@ -75,24 +75,29 @@ def check_asoundrc():
 
 def create_asoundrc():
     """Create and populate ~/.config/alsacontrol/asoundrc."""
-    # support for setting this to False is not yet given!
-    # the mixer names from asoundrc-template are used everywhere
-    input_softvol = True
-    output_softvol = True
-
     pcm_input = get_config().get('pcm_input', 'null')
     pcm_output = get_config().get('pcm_output', 'null')
+    if pcm_input == 'null':
+        logger.warning('No input specified')
+    if pcm_output == 'null':
+        logger.warning('No output specified')
 
-    if pcm_input is None:
-        logger.error('No input specified')
-    if pcm_output is None:
-        logger.error('No output specified')
+    if 'CARD=' not in pcm_output:
+        # software output, for example jack
+        output_pcm_softvol = 'alsacontrol-plug'
+    else:
+        output_pcm_softvol = 'alsacontrol-dmix'
 
     asoundrc_config = {
-        'input_pcm_1': 'alsacontrol-input' if input_softvol else pcm_input,
-        'output_pcm_1': 'alsacontrol-output' if output_softvol else pcm_output,
+        'output_pcm_asym': 'alsacontrol-output-softvol',
+        'output_pcm_softvol': output_pcm_softvol,
+        'output_pcm': pcm_output,
+
+
+        'input_pcm_1': 'alsacontrol-input',
         'input_pcm_2': pcm_input,
-        'output_pcm_2': pcm_output
+        'output_pcm_2': pcm_output,
+        'output_channels': get_config().get('output_channels', 2)
     }
 
     template_path = os.path.join(get_data_path(), 'asoundrc-template')

@@ -31,7 +31,7 @@ gi.require_version('GLib', '2.0')
 from gi.repository import Gtk, GLib
 
 from alsacontrol.alsa import get_volume, set_volume, toggle_mute, is_muted, \
-    get_devices, get_ports
+    get_cards
 from alsacontrol.bindings import Bindings, get_volume_string, \
     get_volume_icon, get_error_advice, select_pcm, get_current_output
 from alsacontrol.data import get_data_path
@@ -48,15 +48,12 @@ class ALSAControlWindow:
         builder.connect_signals(self)
         self.builder = builder
 
-        self.device_selection = self.builder.get_object(
-            'output_device_selection'
-        )
-        self.port_selection = self.builder.get_object(
-            'output_port_selection'
+        self.card_selection = self.builder.get_object(
+            'output_card_selection'
         )
 
         self.initialize_volume_slider()
-        self.populate_output_devices_dropdown()
+        self.populate_output_cards_dropdown()
         self.populate_input_pcms()
         self.select_current_output()
 
@@ -68,7 +65,8 @@ class ALSAControlWindow:
         speaker_test_error = builder.get_object('speaker_test_error')
         speaker_test_error.hide()
 
-        GLib.timeout_add(500, self.refresh_devices)
+        GLib.timeout_add(500, self.refresh_cards)
+        GLib.timeout_add(500, self.refresh_volume)
 
         Gtk.main()
 
@@ -79,11 +77,10 @@ class ALSAControlWindow:
         self.bindings.stop_speaker_test()
         Gtk.main_quit()
 
-    def refresh_devices(self):
-        """Refresh the list of devices for both input and output."""
+    def refresh_cards(self):
+        """Refresh the list of cards for both input and output."""
         if self.bindings.log_new_pcms():
-            self.populate_output_devices_dropdown()
-            self.populate_output_ports_dropdown()
+            self.populate_output_cards_dropdown()
             self.populate_input_pcms()
         return True
 
@@ -100,16 +97,20 @@ class ALSAControlWindow:
 
     def on_switch_page(self, notebook, page, page_num):
         page_name = page.get_name()
-        input_devices_scrolled_window = self.builder.get_object(
-            'input_devices_scrolled_window'
+        input_cards_scrolled_window = self.builder.get_object(
+            'input_cards_scrolled_window'
         )
-        if page_name == 'input_device_tab':
-            input_devices_scrolled_window.show()
+        if page_name == 'input_card_tab':
+            input_cards_scrolled_window.show()
         else:
             # shrink the output tab height to the contents
-            input_devices_scrolled_window.hide()
-            window = self.builder.get_object('alsacontrol_window')
-            window.resize(window.get_size()[0], 1)
+            input_cards_scrolled_window.hide()
+            self.shrink_height()
+
+    def shrink_height(self):
+        """Reduce the windows height as much as possible."""
+        window = self.builder.get_object('alsacontrol_window')
+        window.resize(window.get_size()[0], 1)
 
     """Output"""
 
@@ -119,19 +120,14 @@ class ALSAControlWindow:
         Use this in a with statement to avoid calling handlers when
         modifying the dropdown contents.
         """
-        device_selection = self.device_selection
-        port_selection = self.port_selection
-        on_output_device_selected = self.on_output_device_selected
-        on_output_port_selected = self.on_output_port_selected
+        card_selection = self.card_selection
+        on_output_card_selected = self.on_output_card_selected
 
         class dropdown_handlers_disabled:
             def __enter__(self):
                 try:
-                    device_selection.disconnect_by_func(
-                        on_output_device_selected
-                    )
-                    port_selection.disconnect_by_func(
-                        on_output_port_selected
+                    card_selection.disconnect_by_func(
+                        on_output_card_selected
                     )
                     self.was_connected = True
                 except TypeError:
@@ -139,11 +135,8 @@ class ALSAControlWindow:
 
             def __exit__(self, *_):
                 if self.was_connected:
-                    device_selection.connect(
-                        'changed', on_output_device_selected
-                    )
-                    port_selection.connect(
-                        'changed', on_output_port_selected
+                    card_selection.connect(
+                        'changed', on_output_card_selected
                     )
 
         return dropdown_handlers_disabled()
@@ -151,75 +144,42 @@ class ALSAControlWindow:
     def select_current_output(self):
         """Select the configured values for both dropdowns."""
         with self.dropdown_handlers_disabled():
-            d, device, p, port = get_current_output()
+            d, card = get_current_output()
+            if card is not None:
+                card_selection = self.card_selection
+                if card_selection.get_active() != d:
+                    card_selection.set_active(d)
 
-            if device is not None:
-                device_selection = self.device_selection
-                if device_selection.get_active() != d:
-                    device_selection.set_active(d)
-
-            self.populate_output_ports_dropdown()
-
-            if port is not None:
-                output_selection = self.port_selection
-                if output_selection.get_active() != p:
-                    output_selection.set_active(p)
-
-    def populate_output_devices_dropdown(self):
+    def populate_output_cards_dropdown(self):
         """Get all output options and fill them into the dropdowns."""
         with self.dropdown_handlers_disabled():
-            devices = get_devices(alsaaudio.PCM_PLAYBACK)
-            self.device_selection.remove_all()
-            for device in devices:
-                self.device_selection.append(device, device)
-            # since all devices have been removed, restore the selection
-            index, device, _, _ = get_current_output()
-            if device is not None:
-                self.device_selection.set_active(index)
+            cards = get_cards(alsaaudio.PCM_PLAYBACK)
+            self.card_selection.remove_all()
+            for card in cards:
+                self.card_selection.append(card, card)
+            # since all cards have been removed, restore the selection
+            index, card = get_current_output()
+            if card is not None:
+                self.card_selection.set_active(index)
 
-    def populate_output_ports_dropdown(self):
-        """For the selected device, write the options into the UI."""
-        with self.dropdown_handlers_disabled():
-            device = self.device_selection.get_active_text()
-            self.port_selection.remove_all()
-            if device is None:
-                return
-            ports = get_ports(device, alsaaudio.PCM_PLAYBACK)
-            if len(ports) == 0:
-                # no options exist for this device
-                select_pcm(device, None)
-                return
-            for port in ports:
-                self.port_selection.append(port, port)
-
-            # since all ports have been removed, restore the selection
-            _, _, index, port = get_current_output()
-            if port is not None:
-                self.port_selection.set_active(index)
-
-    def on_output_device_selected(self, device_dropdown):
-        """Handler for when a device is selected or the list just changed."""
-        device_name = device_dropdown.get_active_text()
-        if device_name is None:
+    def on_output_card_selected(self, card_dropdown):
+        """Handler for when a card is selected or the list just changed."""
+        card_name = card_dropdown.get_active_text()
+        if card_name is None:
             return
-        if get_current_output()[1] == device_name:
+        if get_current_output()[1] == card_name:
             # already at the correct selection
             return
-
-        self.populate_output_ports_dropdown()
-        # select the sysdefault port by default if possible
-        ports = get_ports(device_name, alsaaudio.PCM_PLAYBACK)
-        if 'sysdefault' in ports:
-            self.port_selection.set_active(ports.index('sysdefault'))
+        select_pcm(card_name)
 
     def on_output_port_selected(self, port_dropdown):
         """Handler that actually sets the current default pcm."""
         port_name = port_dropdown.get_active_text()
         if port_name is None:
             return
-        device_selection = self.device_selection
-        device = device_selection.get_active_text()
-        select_pcm(device, port_name)
+        card_selection = self.card_selection
+        card = card_selection.get_active_text()
+        select_pcm(card, port_name)
 
     def on_output_volume_change(self, gtk_range):
         """Handler when the output volume slider was dragged."""
@@ -257,11 +217,12 @@ class ALSAControlWindow:
             advice = get_error_advice(error)
             if advice is not None:
                 speaker_test_error_text.set_label(
-                    '{}\n\n{}'.format(error, advice)
+                    '{}\n\nHelp:\n{}'.format(error, advice)
                 )
             else:
                 speaker_test_error_text.set_label(error)
         else:
+            self.shrink_height()
             speaker_test_error.hide()
 
         if state:
@@ -284,43 +245,49 @@ class ALSAControlWindow:
     """Input"""
 
     def populate_input_pcms(self):
-        """Create the list of intput devices."""
-        input_devices_list = self.builder.get_object('input_devices_list')
-        devices = get_devices(alsaaudio.PCM_CAPTURE)
-        for device in devices:
-            ports = get_ports(device, alsaaudio.PCM_CAPTURE) or ['']
-            for port in ports:
-                level = Gtk.ProgressBar()
-                level.set_valign(Gtk.Align.CENTER)
-                select_button = Gtk.Button.new_from_icon_name(
-                    'object-select', Gtk.IconSize.BUTTON
-                )
-                pcm_name = Gtk.Label(
-                    label='{} {}'.format(device, port or '')
-                )
-                pcm_name.set_xalign(0.0)
+        """Create the list of intput cards."""
+        input_cards_list = self.builder.get_object('input_cards_list')
+        cards = get_cards(alsaaudio.PCM_CAPTURE)
+        for card in cards:
+            level = Gtk.ProgressBar()
+            level.set_valign(Gtk.Align.CENTER)
+            select_button = Gtk.Button.new_from_icon_name(
+                'object-select', Gtk.IconSize.BUTTON
+            )
+            pcm_name = Gtk.Label(
+                label=card
+            )
+            pcm_name.set_xalign(0.0)
 
-                box = Gtk.Box(
-                    orientation=Gtk.Orientation.HORIZONTAL,
-                    spacing=10
-                )
-                box.pack_start(
-                    pcm_name, expand=True, fill=True, padding=0
-                )
-                box.pack_start(
-                    level, expand=False, fill=False, padding=0
-                )
-                box.pack_start(
-                    select_button, expand=False, fill=True, padding=0
-                )
-                box.set_margin_start(10)
-                box.set_margin_end(22)
+            box = Gtk.Box(
+                orientation=Gtk.Orientation.HORIZONTAL,
+                spacing=10
+            )
+            box.pack_start(
+                pcm_name, expand=True, fill=True, padding=0
+            )
+            box.pack_start(
+                level, expand=False, fill=False, padding=0
+            )
+            box.pack_start(
+                select_button, expand=False, fill=True, padding=0
+            )
+            box.set_margin_start(10)
+            box.set_margin_end(22)
 
-                box.show_all()
+            box.show_all()
 
-                input_devices_list.pack_start(
-                    box, expand=False, fill=False, padding=10
-                )
+            input_cards_list.pack_start(
+                box, expand=False, fill=False, padding=10
+            )
+
+        input_cards_scrolled_window = self.builder.get_object(
+            'input_cards_scrolled_window'
+        )
+        # set the minimum content height of the ScrolledWindow to the
+        # heigt of the list, but at most 300px
+        height = min(input_cards_list.get_preferred_height()[0], 400)
+        input_cards_scrolled_window.set_min_content_height(height)
 
 
 if __name__ == '__main__':

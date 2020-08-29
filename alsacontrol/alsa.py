@@ -22,8 +22,6 @@
 """Helperfunctions to talk to alsa and further simplify pyalsaaudio."""
 
 
-import re
-
 import numpy as np
 
 import alsaaudio
@@ -46,18 +44,9 @@ def to_mixer_volume(volume):
     return max(0, min(1, volume ** (1 / 2)))
 
 
-def get_num_output_channels(pcm):
-    """Get the number of channels."""
-    port = get_port(pcm)
-    if 'surround' in port:
-        # surround21: 3 channels
-        return sum([int(num) for num in re.findall(r'\d', port)])
-    return 2
-
-
 def get_level():
     """Get the current level of recording."""
-    # defaults to 2 channels and 16 bit on the default device
+    # defaults to 2 channels and 16 bit on the default card
     pcm = alsaaudio.PCM(type=alsaaudio.PCM_CAPTURE)
 
     while True:
@@ -69,23 +58,25 @@ def get_level():
             return level / ((2 ** 16) / 2)
 
 
-def get_sysdefault(pcm_type):
-    """Of a list of pcm devices, return one with a sysdefault port or null.
+def get_default_card(pcm_type):
+    """Return some card that can work as default.
 
     Parameters
     ----------
-    pcm_type : string
+    pcm_type : int
         one of alsaaudio.PCM_CAPTURE or alsaaudio.PCM_PLAYBACK
     """
-    pcm_list = alsaaudio.pcms(pcm_type)
-    for pcm in pcm_list:
-        if pcm.startswith('sysdefault:'):
+    pcms = alsaaudio.pcms()
+    for pcm in pcms:
+        if 'Generic' in pcm:
             return pcm
-    return 'null'
+        if 'CARD=' in pcm:
+            return pcm
+    logger.error('Could not find a default card')
 
 
-def get_device(pcm):
-    """Split the device from a pcm string.
+def get_card(pcm):
+    """Split the card from a pcm string.
 
     get "Generic" from iec958:CARD=Generic,DEV=0
     or sysdefault:CARD=Generic
@@ -94,14 +85,14 @@ def get_device(pcm):
     if pcm == 'jack':
         return pcm
     if ':CARD=' in pcm:
-        device = pcm.split(':CARD=')[1].split(',')[0]
-        return device
-    # unsupported device
+        card = pcm.split(':CARD=')[1].split(',')[0]
+        return card
+    # unsupported card
     return None
 
 
-def get_devices(pcm_type):
-    """List all output devices, including options such as jack.
+def get_cards(pcm_type):
+    """List all output cards, including options such as jack.
 
     Parameters
     ----------
@@ -109,81 +100,14 @@ def get_devices(pcm_type):
         one of alsaaudio.PCM_CAPTURE or alsaaudio.PCM_PLAYBACK
     """
     pcm_list = alsaaudio.pcms(pcm_type)
-    devices = []
+    cards = []
     for pcm in pcm_list:
-        device = get_device(pcm)
-        if device and len(device) > 0 and device not in devices:
-            devices.append(device)
-    if len(devices) == 0:
-        logger.error('Could not find any device')
-    return devices
-
-
-def get_port(pcm):
-    """Split the output from a pcm string.
-
-    get "iec958" from iec958:CARD=Generic,DEV=0
-    or "sysdefault" from sysdefault:CARD=Generic
-    or None for "jack"
-    """
-    split = pcm.split(':CARD=')
-    if len(split) == 1:
-        # then the complete pcm string is only a device
-        return None
-    return split[0]
-
-
-def get_ports(device, pcm_type):
-    """For a device, return its ports. For example 'front' or 'usbstream'.
-
-    Parameters
-    ----------
-    device : string
-        For example "Generic" or "HDMI"
-    pcm_type : string
-        one of alsaaudio.PCM_CAPTURE or alsaaudio.PCM_PLAYBACK
-    """
-    pcm_list = alsaaudio.pcms(pcm_type)
-    ports = []
-    for pcm in pcm_list:
-        if device not in pcm:
-            continue
-
-        if ':CARD=' in pcm:
-            # get "iec958" from iec958:CARD=Generic,DEV=0
-            # "sysdefault" from sysdefault:CARD=Generic
-            port = get_port(pcm)
-            if port and len(port) == 0 or port in ports:
-                continue
-            ports.append(port)
-        else:
-            # probably jack
-            ports.append(None)
-    if len(ports) == 0:
-        logger.error('Could not find ports for device %s', device)
-    return ports
-
-
-def get_full_pcm_name(device, port, pcm_type):
-    """With one entry from get_devices and get_ports, get the full pcm name.
-
-    Parameters
-    ----------
-    device : string
-        For example "Generic" or "HDMI"
-    port : string
-        For example "front" or "sysdefault".
-        For jack "" or None work (because no output options exists)
-    pcm_type : string
-        one of alsaaudio.PCM_CAPTURE or alsaaudio.PCM_PLAYBACK
-    """
-    pcm_list = alsaaudio.pcms(pcm_type)
-    for pcm in pcm_list:
-        if device in pcm and not port:
-            return pcm
-        if device in pcm and port and port in pcm:
-            return pcm
-    return None
+        card = get_card(pcm)
+        if card and len(card) > 0 and card not in cards:
+            cards.append(card)
+    if len(cards) == 0:
+        logger.error('Could not find any card')
+    return cards
 
 
 def set_volume(volume, pcm, nonlinear=False):

@@ -70,7 +70,7 @@ Features
 - [x] Always show up to date devices in the GUI
 - [x] Add a button to test the speaker setup
 - [x] Show speaker-test errors in the GUI
-- [x] Add a dropdown to change output pcm devices (which modifies softvols pcm device)
+- [x] Add a dropdown to change output pcm devices
 - [ ] Jack support
 - [ ] Add a list of input devices and show their input level
 - [ ] Notify about new detected audio devices with a button to open the GUI to select it
