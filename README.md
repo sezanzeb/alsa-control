@@ -17,6 +17,19 @@ pip3 install pyalsaaudio
 python3 setup.py install
 ```
 
+**User interface**
+
+```
+alsacontrol-gtk
+```
+
+<p align="center">
+    <img src="data/output-device.png"/>
+</p>
+
+
+**Starting the daemon to control volume via multimedia keys**
+
 Start the daemon. You can put this into your autostart.
 
 ```
