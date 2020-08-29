@@ -159,8 +159,9 @@ class Bindings:
         Returns the subprocess or False if it has been stopped.
         """
         if self.speaker_test_process is None:
-            num_channels = get_num_output_channels()
-            cmd = 'speaker-test -D default -c {} -twav'.format(num_channels)
+            pcm = get_config().get('pcm_output', None)
+            num_channels = get_num_output_channels(pcm)
+            cmd = 'speaker-test -D default -c {} -twav 2>&1'.format(num_channels)
             logger.info('Testing speakers, %d channels', num_channels)
             process = subprocess.Popen(
                 cmd,
@@ -182,16 +183,24 @@ class Bindings:
 
         return_code = self.speaker_test_process.poll()
         if return_code is not None:
+            if return_code == -15:
+                # the test was stopped by hand
+                return False, None
+
             if return_code != 0:
                 # speaker-test had an error, try to read it from its output
+                logger.error('speaker-test failed (code %d):', return_code)
                 lastline = None
                 while True:
                     line = self.speaker_test_process.stdout.readline()
                     if len(line) == 0:
                         break
-                    lastline = line
-                lastline = lastline[:-1].decode()
-                logger.error('speaker-test failed: %s', lastline)
+                    line = line[:-1].decode()
+                    if len(line) > 0:
+                        logger.debug(line)
+                        lastline = line
+                if lastline is not None:
+                    logger.error(lastline)
                 self.speaker_test_process = None
                 return False, lastline
 

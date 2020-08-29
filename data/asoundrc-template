@@ -23,8 +23,12 @@ pcm.alsacontrol-output {{
     slave.pcm {{
         type softvol
         slave.pcm {{
-            type plug
-            slave.pcm "{output_pcm_2}"
+            type dmix
+            ipc_key 92882631
+            slave {{
+                pcm {output_pcm_2}
+                channels {output_channels}
+            }}
         }}
         control {{
             name alsacontrol-output-volume
@@ -39,23 +43,27 @@ pcm.alsacontrol-output {{
 }}
 
 pcm.alsacontrol-input {{
-    type softvol
+    type dsnoop
+    ipc_key 46345624
     slave.pcm {{
         type softvol
         slave.pcm {{
-            type plug
-            slave.pcm "{input_pcm_2}"
+            type softvol
+            slave.pcm {{
+                type plug
+                slave.pcm "{input_pcm_2}"
+            }}
+            control {{
+                name alsacontrol-input-volume
+                card 0
+            }}
         }}
         control {{
-            name alsacontrol-input-volume
+            name alsacontrol-input-mute
             card 0
         }}
+        resolution 2
     }}
-    control {{
-        name alsacontrol-input-mute
-        card 0
-    }}
-    resolution 2
 }}
 
 pcm.!default {{

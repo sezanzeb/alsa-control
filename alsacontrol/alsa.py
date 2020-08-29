@@ -46,11 +46,13 @@ def to_mixer_volume(volume):
     return max(0, min(1, volume ** (1 / 2)))
 
 
-def get_num_output_channels():
+def get_num_output_channels(pcm):
     """Get the number of channels."""
-    # TODO everything has only been tested with stereo so far
-    mixer = alsaaudio.Mixer(OUTPUT_MUTE)
-    return len(mixer.getmute())
+    port = get_port(pcm)
+    if 'surround' in port:
+        # surround21: 3 channels
+        return sum([int(num) for num in re.findall(r'\d', port)])
+    return 2
 
 
 def get_level():

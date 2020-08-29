@@ -79,6 +79,7 @@
                           <object class="GtkComboBoxText" id="output_port_selection">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
+                            <property name="tooltip_text" translatable="yes">Which Only sysdefault seems to support multiplexing</property>
                             <signal name="changed" handler="on_output_port_selected" swapped="no"/>
                           </object>
                           <packing>
@@ -188,7 +189,6 @@
                 </child>
                 <child>
                   <object class="GtkBox" id="speaker_test_error">
-                    <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="orientation">vertical</property>
                     <child>
