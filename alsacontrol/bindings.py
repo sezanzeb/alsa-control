@@ -30,7 +30,8 @@ from argparse import ArgumentParser
 
 import alsaaudio
 
-from alsacontrol.alsa import get_num_output_channels, get_full_pcm_name
+from alsacontrol.alsa import get_num_output_channels, get_full_pcm_name, \
+    get_devices, get_device, get_ports, get_port
 from alsacontrol.logger import logger, update_verbosity, log_info
 from alsacontrol.config import get_config
 from alsacontrol.asoundrc import setup_asoundrc
@@ -81,21 +82,55 @@ def get_error_advice(error):
     return None
 
 
-def select_pcm(device, output):
+def select_pcm(device, port):
     """Write this pcm to the configuration and generate asoundrc.
 
     Parameters
     ----------
     device : string
         "Generic", "jack", ...
-    output : string, None
+    port : string, None
         "sysdefault", "front", etc.
         If "" or None, will select the first possible pcm for that device.
         For jack there are no output options, so "" or None work there.
     """
-    pcm_name = get_full_pcm_name(device, output, alsaaudio.PCM_PLAYBACK)
+    pcm_name = get_full_pcm_name(device, port, alsaaudio.PCM_PLAYBACK)
     get_config().set('pcm_output', pcm_name)
     setup_asoundrc()
+
+
+def get_current_output():
+    """Get a tuple describing the current output selection based on config.
+
+    Returns
+    -------
+    A tuple of (d, device, p, port) with d and p being the index in
+    the list of options from get_devices and get_ports.
+    """
+    pcm_output = get_config().get('pcm_output', None)
+    if pcm_output is None:
+        return None, None, None, None
+
+    devices = get_devices(alsaaudio.PCM_PLAYBACK)
+    if len(devices) == 0:
+        logger.error('Could not find any output pcm')
+        return
+    device = get_device(pcm_output)
+    if device not in devices:
+        logger.warning('Found unknown device %s in config', device)
+        return None, None, None, None
+    d = devices.index(device)
+
+    ports = get_ports(device, alsaaudio.PCM_PLAYBACK)
+    port = get_port(pcm_output)
+    p = ports.index(port)
+    if port not in ports:
+        logger.warning(
+            'Found unknown port %s for device %s in config', port, device
+        )
+        return d, device, None, None
+
+    return d, device, p, port
 
 
 class Bindings:

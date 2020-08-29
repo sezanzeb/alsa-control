@@ -12,67 +12,6 @@
     <property name="can_focus">False</property>
     <property name="icon_name">audio-volume-muted</property>
   </object>
-  <object class="GtkImage" id="icon_select">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="icon_name">object-select</property>
-  </object>
-  <object class="GtkBox" id="input_device_template">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="border_width">10</property>
-    <property name="spacing">10</property>
-    <child>
-      <object class="GtkLabel" id="input_device_name">
-        <property name="visible">True</property>
-        <property name="can_focus">False</property>
-        <property name="label" translatable="yes">Device Name</property>
-        <property name="xalign">0</property>
-      </object>
-      <packing>
-        <property name="expand">True</property>
-        <property name="fill">True</property>
-        <property name="position">0</property>
-      </packing>
-    </child>
-    <child>
-      <object class="GtkBox">
-        <property name="visible">True</property>
-        <property name="can_focus">False</property>
-        <child>
-          <object class="GtkProgressBar">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="valign">center</property>
-          </object>
-          <packing>
-            <property name="expand">True</property>
-            <property name="fill">True</property>
-            <property name="position">0</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkButton">
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="receives_default">True</property>
-            <property name="margin_start">10</property>
-            <property name="image">icon_select</property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">False</property>
-            <property name="position">1</property>
-          </packing>
-        </child>
-      </object>
-      <packing>
-        <property name="expand">False</property>
-        <property name="fill">True</property>
-        <property name="position">1</property>
-      </packing>
-    </child>
-  </object>
   <object class="GtkImage" id="icon_speaker">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
@@ -80,19 +19,18 @@
   </object>
   <object class="GtkAdjustment" id="input_volume_slider_adjustment">
     <property name="upper">1</property>
-    <property name="step_increment">1</property>
+    <property name="step_increment">0.05</property>
     <property name="page_increment">10</property>
   </object>
   <object class="GtkAdjustment" id="output_volume_slider_adjustment">
     <property name="upper">1</property>
-    <property name="step_increment">1</property>
+    <property name="step_increment">0.05</property>
     <property name="page_increment">10</property>
   </object>
   <object class="GtkWindow" id="alsacontrol_window">
     <property name="width_request">600</property>
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">ALSA-Control</property>
-    <property name="resizable">False</property>
     <property name="icon_name">gnome-mixer</property>
     <signal name="delete-event" handler="on_close" swapped="no"/>
     <child>
@@ -102,11 +40,13 @@
         <property name="border_width">10</property>
         <property name="orientation">vertical</property>
         <child>
-          <object class="GtkNotebook">
+          <object class="GtkNotebook" id="tabs">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
+            <signal name="switch-page" handler="on_switch_page" swapped="no"/>
             <child>
               <object class="GtkBox">
+                <property name="name">output_device_tab</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="border_width">10</property>
@@ -118,7 +58,7 @@
                     <property name="can_focus">False</property>
                     <property name="spacing">10</property>
                     <child>
-                      <object class="GtkBox">
+                      <object class="GtkBox" id="output_dropdown_container">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="spacing">10</property>
@@ -127,7 +67,7 @@
                           <object class="GtkComboBoxText" id="output_device_selection">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <signal name="changed" handler="on_device_selected" swapped="no"/>
+                            <signal name="changed" handler="on_output_device_selected" swapped="no"/>
                           </object>
                           <packing>
                             <property name="expand">True</property>
@@ -136,10 +76,10 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkComboBoxText" id="output_mode_selection">
+                          <object class="GtkComboBoxText" id="output_port_selection">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <signal name="changed" handler="on_mode_selected" swapped="no"/>
+                            <signal name="changed" handler="on_output_port_selected" swapped="no"/>
                           </object>
                           <packing>
                             <property name="expand">True</property>
@@ -297,6 +237,7 @@
             </child>
             <child>
               <object class="GtkBox">
+                <property name="name">input_device_tab</property>
                 <property name="height_request">23</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
@@ -407,16 +348,29 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkBox" id="input_devices_list">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="orientation">vertical</property>
+                  <object class="GtkScrolledWindow" id="input_devices_scrolled_window">
+                    <property name="can_focus">True</property>
+                    <property name="shadow_type">in</property>
+                    <property name="min_content_height">200</property>
                     <child>
-                      <placeholder/>
+                      <object class="GtkViewport">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <child>
+                          <object class="GtkBox" id="input_devices_list">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="orientation">vertical</property>
+                            <child>
+                              <placeholder/>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
                     </child>
                   </object>
                   <packing>
-                    <property name="expand">False</property>
+                    <property name="expand">True</property>
                     <property name="fill">True</property>
                     <property name="position">3</property>
                   </packing>
@@ -445,7 +399,7 @@
             </child>
           </object>
           <packing>
-            <property name="expand">False</property>
+            <property name="expand">True</property>
             <property name="fill">True</property>
             <property name="position">0</property>
           </packing>

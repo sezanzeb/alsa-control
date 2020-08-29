@@ -31,11 +31,10 @@ gi.require_version('GLib', '2.0')
 from gi.repository import Gtk, GLib
 
 from alsacontrol.alsa import get_volume, set_volume, toggle_mute, is_muted, \
-    get_devices, get_outputs, get_device, get_output
+    get_devices, get_ports
 from alsacontrol.bindings import Bindings, get_volume_string, \
-    get_volume_icon, get_error_advice, select_pcm
+    get_volume_icon, get_error_advice, select_pcm, get_current_output
 from alsacontrol.data import get_data_path
-from alsacontrol.config import get_config
 
 
 class ALSAControlWindow:
@@ -49,83 +48,44 @@ class ALSAControlWindow:
         builder.connect_signals(self)
         self.builder = builder
 
+        self.device_selection = self.builder.get_object(
+            'output_device_selection'
+        )
+        self.port_selection = self.builder.get_object(
+            'output_port_selection'
+        )
+
         self.initialize_volume_slider()
-        self.populate_devices_dropdown()
+        self.populate_output_devices_dropdown()
+        self.populate_input_pcms()
+        self.select_current_output()
 
         self.speaker_test_process = None
 
         window = builder.get_object('alsacontrol_window')
-        window.show_all()
+        window.show()
 
         speaker_test_error = builder.get_object('speaker_test_error')
         speaker_test_error.hide()
 
-        GLib.timeout_add(1000, self.refresh_devices)
+        GLib.timeout_add(500, self.refresh_devices)
 
         Gtk.main()
+
+    """General Stuff"""
+
+    def on_close(self, *_):
+        """Safely close the application."""
+        self.bindings.stop_speaker_test()
+        Gtk.main_quit()
 
     def refresh_devices(self):
         """Refresh the list of devices for both input and output."""
         if self.bindings.log_new_pcms():
-            self.populate_devices_dropdown()
+            self.populate_output_devices_dropdown()
+            self.populate_output_ports_dropdown()
+            self.populate_input_pcms()
         return True
-
-    def populate_devices_dropdown(self):
-        """Get all output options and fill them into the dropdowns."""
-        device_selection = self.builder.get_object('output_device_selection')
-        devices = get_devices(alsaaudio.PCM_PLAYBACK)  # alsaaudio.cards()
-        device_selection.remove_all()
-        for device in devices:
-            device_selection.append(device, device)
-
-        # select the currently used device
-        active = get_device(get_config().get('pcm_output', 'null'))
-        if active in devices:
-            active_index = devices.index(active)
-            if device_selection.get_active() != active_index:
-                print('set_active', device_selection.get_active(), active_index)
-                device_selection.set_active(active_index)
-
-    def populate_modes_dropdown(self, device):
-        """For the selected device, write the options into the UI."""
-        output_selection = self.builder.get_object('output_mode_selection')
-        output_selection.remove_all()
-
-        if device is None:
-            return
-
-        outputs = get_outputs(device, alsaaudio.PCM_PLAYBACK)
-
-        if len(outputs) == 0:
-            # no options exist for this device
-            select_pcm(device, None)
-            return
-
-        for output in outputs:
-            output_selection.append(output, output)
-
-        # select the currently used output
-        active = get_output(get_config().get('pcm_output', 'null'))
-        if active in outputs:
-            active_index = outputs.index(active)
-            if output_selection.get_active() != active_index:
-                output_selection.set_active(active_index)
-
-    def on_device_selected(self, device):
-        self.populate_modes_dropdown(device.get_active_text())
-
-    def on_mode_selected(self, output):
-        """Actually set the current default pcm."""
-        output = output.get_active_text()
-        if output is None:
-            # happens when the device is changed
-            return
-
-        output_selection = self.builder.get_object('output_mode_selection')
-        device_selection = self.builder.get_object('output_device_selection')
-        device = device_selection.get_active_text()
-        output = output_selection.get_active_text()
-        select_pcm(device, output)
 
     def initialize_volume_slider(self):
         """Reflect the current volume."""
@@ -138,21 +98,144 @@ class ALSAControlWindow:
         input_volume = get_volume(alsaaudio.PCM_CAPTURE, nonlinear=True)
         input_slider.set_value(input_volume)
 
+    def on_switch_page(self, notebook, page, page_num):
+        page_name = page.get_name()
+        input_devices_scrolled_window = self.builder.get_object(
+            'input_devices_scrolled_window'
+        )
+        if page_name == 'input_device_tab':
+            input_devices_scrolled_window.show()
+        else:
+            # shrink the output tab height to the contents
+            input_devices_scrolled_window.hide()
+            window = self.builder.get_object('alsacontrol_window')
+            window.resize(window.get_size()[0], 1)
+
+    """Output"""
+
+    def dropdown_handlers_disabled(self):
+        """Safely modify dropdown contents.
+
+        Use this in a with statement to avoid calling handlers when
+        modifying the dropdown contents.
+        """
+        device_selection = self.device_selection
+        port_selection = self.port_selection
+        on_output_device_selected = self.on_output_device_selected
+        on_output_port_selected = self.on_output_port_selected
+
+        class dropdown_handlers_disabled:
+            def __enter__(self):
+                try:
+                    device_selection.disconnect_by_func(
+                        on_output_device_selected
+                    )
+                    port_selection.disconnect_by_func(
+                        on_output_port_selected
+                    )
+                    self.was_connected = True
+                except TypeError:
+                    self.was_connected = False
+
+            def __exit__(self, *_):
+                if self.was_connected:
+                    device_selection.connect(
+                        'changed', on_output_device_selected
+                    )
+                    port_selection.connect(
+                        'changed', on_output_port_selected
+                    )
+
+        return dropdown_handlers_disabled()
+
+    def select_current_output(self):
+        """Select the configured values for both dropdowns."""
+        with self.dropdown_handlers_disabled():
+            d, device, p, port = get_current_output()
+
+            if device is not None:
+                device_selection = self.device_selection
+                if device_selection.get_active() != d:
+                    device_selection.set_active(d)
+
+            self.populate_output_ports_dropdown()
+
+            if port is not None:
+                output_selection = self.port_selection
+                if output_selection.get_active() != p:
+                    output_selection.set_active(p)
+
+    def populate_output_devices_dropdown(self):
+        """Get all output options and fill them into the dropdowns."""
+        with self.dropdown_handlers_disabled():
+            devices = get_devices(alsaaudio.PCM_PLAYBACK)
+            self.device_selection.remove_all()
+            for device in devices:
+                self.device_selection.append(device, device)
+            # since all devices have been removed, restore the selection
+            index, device, _, _ = get_current_output()
+            if device is not None:
+                self.device_selection.set_active(index)
+
+    def populate_output_ports_dropdown(self):
+        """For the selected device, write the options into the UI."""
+        with self.dropdown_handlers_disabled():
+            device = self.device_selection.get_active_text()
+            self.port_selection.remove_all()
+            if device is None:
+                return
+            ports = get_ports(device, alsaaudio.PCM_PLAYBACK)
+            if len(ports) == 0:
+                # no options exist for this device
+                select_pcm(device, None)
+                return
+            for port in ports:
+                self.port_selection.append(port, port)
+
+            # since all ports have been removed, restore the selection
+            _, _, index, port = get_current_output()
+            if port is not None:
+                self.port_selection.set_active(index)
+
+    def on_output_device_selected(self, device_dropdown):
+        """Handler for when a device is selected or the list just changed."""
+        device_name = device_dropdown.get_active_text()
+        if device_name is None:
+            return
+        if get_current_output()[1] == device_name:
+            # already at the correct selection
+            return
+
+        self.populate_output_ports_dropdown()
+        # select the sysdefault port by default if possible
+        ports = get_ports(device_name, alsaaudio.PCM_PLAYBACK)
+        if 'sysdefault' in ports:
+            self.port_selection.set_active(ports.index('sysdefault'))
+
+    def on_output_port_selected(self, port_dropdown):
+        """Handler that actually sets the current default pcm."""
+        port_name = port_dropdown.get_active_text()
+        if port_name is None:
+            return
+        device_selection = self.device_selection
+        device = device_selection.get_active_text()
+        select_pcm(device, port_name)
+
     def on_output_volume_change(self, gtk_range):
-        """The volume slider in the "Output Device" tab was dragged."""
+        """Handler when the output volume slider was dragged."""
         muted = is_muted()
         volume = gtk_range.get_value()
         self.refresh_output_state(volume, muted)
         set_volume(volume, alsaaudio.PCM_PLAYBACK, nonlinear=True)
 
     def on_mute_output_pressed(self, _):
-        """The mute button was pressed."""
+        """Handler for when the mute button was pressed."""
         muted = toggle_mute()
         volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True)
         self.refresh_output_state(volume, muted)
 
     def on_test_speaker_clicked(self, _):
-        """Test the speaker setup by playing sounds."""
+        """Handler when the speaker test button was pressed."""
         self.bindings.toggle_speaker_test()
         # after some delay check if it is still running,
         # to show potential errors
@@ -183,7 +266,7 @@ class ALSAControlWindow:
 
         if state:
             button.set_label('Stop Test')
-            return True
+            return True  # keep the timeout running
         else:
             button.set_label('Test Speaker')
             return False
@@ -198,10 +281,47 @@ class ALSAControlWindow:
         volume_image = self.builder.get_object('output_volume_icon')
         volume_image.set_from_icon_name(volume_icon_name, Gtk.IconSize.BUTTON)
 
-    def on_close(self, *_):
-        """Safely close the application."""
-        self.bindings.stop_speaker_test()
-        Gtk.main_quit()
+    """Input"""
+
+    def populate_input_pcms(self):
+        """Create the list of intput devices."""
+        input_devices_list = self.builder.get_object('input_devices_list')
+        devices = get_devices(alsaaudio.PCM_CAPTURE)
+        for device in devices:
+            ports = get_ports(device, alsaaudio.PCM_CAPTURE) or ['']
+            for port in ports:
+                level = Gtk.ProgressBar()
+                level.set_valign(Gtk.Align.CENTER)
+                select_button = Gtk.Button.new_from_icon_name(
+                    'object-select', Gtk.IconSize.BUTTON
+                )
+                pcm_name = Gtk.Label(
+                    label='{} {}'.format(device, port or '')
+                )
+                pcm_name.set_xalign(0.0)
+
+                box = Gtk.Box(
+                    orientation=Gtk.Orientation.HORIZONTAL,
+                    spacing=10
+                )
+                box.pack_start(
+                    pcm_name, expand=True, fill=True, padding=0
+                )
+                box.pack_start(
+                    level, expand=False, fill=False, padding=0
+                )
+                box.pack_start(
+                    select_button, expand=False, fill=True, padding=0
+                )
+                box.set_margin_start(10)
+                box.set_margin_end(22)
+
+                box.show_all()
+
+                input_devices_list.pack_start(
+                    box, expand=False, fill=False, padding=10
+                )
+
 
 if __name__ == '__main__':
     ALSAControlWindow()
