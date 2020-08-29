@@ -31,7 +31,7 @@ from alsacontrol.logger import logger
 alsactl_asoundrc = os.path.expanduser('~/.config/alsacontrol/asoundrc')
 
 
-def setup():
+def setup_asoundrc():
     """Sets up the .asoundrc include and files in home."""
     check_asoundrc()
     create_asoundrc()

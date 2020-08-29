@@ -26,13 +26,13 @@ import os
 import signal
 import subprocess
 import sys
-import time
 from argparse import ArgumentParser
 
 import alsaaudio
 
-from alsacontrol.alsa import get_num_output_channels
+from alsacontrol.alsa import get_num_output_channels, get_devices, get_device
 from alsacontrol.logger import logger, update_verbosity, log_info
+from alsacontrol.config import get_config
 
 
 def get_volume_icon(volume, muted):
@@ -64,6 +64,22 @@ def get_volume_string(volume, muted):
         return 'muted'
 
 
+def get_error_advice(error):
+    """Get some help for errors."""
+    if 'resource busy' in error:
+        return (
+            'You can try to run `lsof | grep /dev/snd/` to '
+            'see which process is blocking it.'
+        )
+    if 'No such device' in error:
+        pcm_output = get_config().get('pcm_output')
+        return (
+            'The pcm device "{}" does not exist. '.format(pcm_output) +
+            'Try to select something different.'
+        )
+    return None
+
+
 class Bindings:
     """Do everything the ui code wants to do without using ui libs."""
     def __init__(self):
@@ -80,31 +96,95 @@ class Bindings:
         log_info()
 
         self.output_volume = 0
-        self.speaker_test_pid = None
+        self.speaker_test_process = None
+
+        self.pcms = None
 
     def toggle_speaker_test(self):
         """Run the speaker-test script or stop it, if it is running.
 
-        Returns True if it is run, False if it has been stopped.
+        Returns the subprocess or False if it has been stopped.
         """
-        if self.speaker_test_pid is None:
+        if self.speaker_test_process is None:
             num_channels = get_num_output_channels()
             cmd = 'speaker-test -D default -c {} -twav'.format(num_channels)
             logger.info('Testing speakers, %d channels', num_channels)
             process = subprocess.Popen(
                 cmd,
                 shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 preexec_fn=os.setsid
             )
-            self.speaker_test_pid = process.pid
-            return True
+            self.speaker_test_process = process
+            return process
 
         self.stop_speaker_test()
         return False
 
+    def check_speaker_test(self):
+        """Return a tuple of (running, error) for the speaker test."""
+        if self.speaker_test_process is None:
+            return False, None
+
+        return_code = self.speaker_test_process.poll()
+        if return_code is not None:
+            if return_code != 0:
+                # speaker-test had an error, try to read it from its output
+                lastline = None
+                while True:
+                    line = self.speaker_test_process.stdout.readline()
+                    if len(line) == 0:
+                        break
+                    lastline = line
+                lastline = lastline[:-1].decode()
+                logger.error('speaker-test failed: %s', lastline)
+                self.speaker_test_process = None
+                return False, lastline
+
+            if return_code == 0:
+                self.speaker_test_process = None
+                return False, None
+
+            if return_code is None:
+                return True, None
+
+        return True, None
+
     def stop_speaker_test(self):
         """Stop the speaker test if it is running."""
-        if self.speaker_test_pid is not None:
+        if self.speaker_test_process is None:
+            return False
+
+        return_code = self.speaker_test_process.poll()
+        if return_code is None:
+            pid = self.speaker_test_process.pid
             logger.info('Stopping speaker test')
-            os.killpg(os.getpgid(self.speaker_test_pid), signal.SIGTERM)
-            self.speaker_test_pid = None
+            try:
+                os.killpg(os.getpgid(pid), signal.SIGTERM)
+            except ProcessLookupError:
+                logger.debug(
+                    'Tried to stop speaker-test process that has already '
+                    'been stopped'
+                )
+                # It has already been stopped
+                pass
+
+    def log_new_pcms(self):
+        """Write to the console if new devices are added. Return True if so."""
+        inputs = set(alsaaudio.pcms(alsaaudio.PCM_CAPTURE))
+        outputs = set(alsaaudio.pcms(alsaaudio.PCM_PLAYBACK))
+        pcms = inputs.union(outputs)
+        changes = 0
+        if self.pcms is None:
+            # first time running, don't log yet
+            pass
+        else:
+            for pcm in self.pcms.difference(pcms):
+                logger.info('Removed pcm %s', pcm)
+                changes += 1
+            for pcm in pcms.difference(self.pcms):
+                logger.info('Found new pcm %s', pcm)
+                changes += 1
+        self.pcms = inputs.union(outputs)
+        return changes > 0

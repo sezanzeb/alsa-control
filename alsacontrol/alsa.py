@@ -22,6 +22,8 @@
 """Helperfunctions to talk to alsa and further simplify pyalsaaudio."""
 
 
+import re
+
 import numpy as np
 
 import alsaaudio
@@ -80,6 +82,100 @@ def get_sysdefault(pcm_type):
     return 'null'
 
 
+def get_device(pcm):
+    """Split the device from a pcm string.
+
+    get "Generic" from iec958:CARD=Generic,DEV=0
+    or sysdefault:CARD=Generic
+    or "jack" from "jack"
+    """
+    if pcm == 'jack':
+        return pcm
+    if ':CARD=' in pcm:
+        device = pcm.split(':CARD=')[1].split(',')[0]
+        return device
+    # unsupported device
+    return None
+
+
+def get_devices(pcm_type):
+    """List all output devices, including options such as jack.
+
+    Parameters
+    ----------
+    pcm_type : int
+        one of alsaaudio.PCM_CAPTURE or alsaaudio.PCM_PLAYBACK
+    """
+    pcm_list = alsaaudio.pcms(pcm_type)
+    devices = []
+    for pcm in pcm_list:
+        device = get_device(pcm)
+        if device and len(device) > 0 and device not in devices:
+            devices.append(device)
+    if len(devices) == 0:
+        logger.error('Could not find any device')
+    return devices
+
+
+def get_output(pcm):
+    """Split the output from a pcm string.
+
+    get "iec958" from iec958:CARD=Generic,DEV=0
+    or "sysdefault" from sysdefault:CARD=Generic
+    or None for "jack"
+    """
+    split = pcm.split(':CARD=')
+    if len(split) == 1:
+        # then the complete pcm string is only a device
+        return None
+    return split[0]
+
+
+def get_outputs(device, pcm_type):
+    """For a device, return its outputs. For example 'front' or 'sysdefault'.
+
+    Parameters
+    ----------
+    device : string
+        For example "Generic" or "HDMI"
+    pcm_type : string
+        one of alsaaudio.PCM_CAPTURE or alsaaudio.PCM_PLAYBACK
+    """
+    pcm_list = alsaaudio.pcms(pcm_type)
+    outputs = []
+    if device != 'jack':
+        for pcm in pcm_list:
+            if ':CARD={}'.format(device) in pcm:
+                # get "iec958" from iec958:CARD=Generic,DEV=0
+                # "sysdefault" from sysdefault:CARD=Generic
+                output = get_output(pcm)
+                if output and len(output) == 0 or output in outputs:
+                    continue
+                outputs.append(output)
+        if len(outputs) == 0:
+            logger.error('Could not find outputs for device %s', device)
+    return outputs
+
+
+def get_full_pcm_name(device, output, pcm_type):
+    """With one entry from get_devices and get_outputs, get the full pcm name.
+
+    Parameters
+    ----------
+    device : string
+        For example "Generic" or "HDMI"
+    output : string
+        For example "front" or "sysdefault"
+    pcm_type : string
+        one of alsaaudio.PCM_CAPTURE or alsaaudio.PCM_PLAYBACK
+    """
+    pcm_list = alsaaudio.pcms(pcm_type)
+    for pcm in pcm_list:
+        if device in pcm and output in pcm:
+            return pcm
+    return None
+
+
 def set_volume(volume, pcm, nonlinear=False):
     """Change the mixer volume.
 
@@ -97,13 +193,13 @@ def set_volume(volume, pcm, nonlinear=False):
     elif pcm == alsaaudio.PCM_CAPTURE:
         mixer_name = INPUT_VOLUME
     else:
-        raise ValueError('unsupported pcm {}'.format(pcm))
+        raise ValueError('Unsupported pcm {}'.format(pcm))
 
     if nonlinear:
         volume = to_mixer_volume(volume)
 
     mixer_volume = min(100, max(0, round(volume * 100)))
-    logger.debug('setting the "%s" value to %s%%', mixer_name, mixer_volume)
+    logger.debug('Setting the "%s" value to %s%%', mixer_name, mixer_volume)
     mixer = alsaaudio.Mixer(mixer_name)
     mixer.setvolume(mixer_volume)
 
@@ -123,7 +219,7 @@ def get_volume(pcm, nonlinear=False):
     elif pcm == alsaaudio.PCM_CAPTURE:
         mixer_name = INPUT_VOLUME
     else:
-        raise ValueError('unsupported pcm {}'.format(pcm))
+        raise ValueError('Unsupported pcm {}'.format(pcm))
 
     if mixer_name not in alsaaudio.mixers():
         logger.warning('Could not find mixer %s', mixer_name)

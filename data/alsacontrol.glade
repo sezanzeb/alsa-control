@@ -89,9 +89,10 @@
     <property name="page_increment">10</property>
   </object>
   <object class="GtkWindow" id="alsacontrol_window">
-    <property name="width_request">500</property>
+    <property name="width_request">600</property>
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">ALSA-Control</property>
+    <property name="resizable">False</property>
     <property name="icon_name">gnome-mixer</property>
     <signal name="delete-event" handler="on_close" swapped="no"/>
     <child>
@@ -117,9 +118,35 @@
                     <property name="can_focus">False</property>
                     <property name="spacing">10</property>
                     <child>
-                      <object class="GtkComboBoxText" id="output_device_selection">
+                      <object class="GtkBox">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="spacing">10</property>
+                        <property name="homogeneous">True</property>
+                        <child>
+                          <object class="GtkComboBoxText" id="output_device_selection">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <signal name="changed" handler="on_device_selected" swapped="no"/>
+                          </object>
+                          <packing>
+                            <property name="expand">True</property>
+                            <property name="fill">True</property>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkComboBoxText" id="output_mode_selection">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <signal name="changed" handler="on_mode_selected" swapped="no"/>
+                          </object>
+                          <packing>
+                            <property name="expand">True</property>
+                            <property name="fill">True</property>
+                            <property name="position">1</property>
+                          </packing>
+                        </child>
                       </object>
                       <packing>
                         <property name="expand">True</property>
@@ -133,7 +160,7 @@
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
                         <property name="image">icon_output_mute</property>
-                        <signal name="pressed" handler="on_mute_output_pressed" swapped="no"/>
+                        <signal name="clicked" handler="on_mute_output_pressed" swapped="no"/>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -211,12 +238,49 @@
                     <property name="receives_default">True</property>
                     <property name="halign">end</property>
                     <property name="image">icon_speaker</property>
-                    <signal name="released" handler="on_test_speaker_clicked" swapped="no"/>
+                    <signal name="clicked" handler="on_test_speaker_clicked" swapped="no"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">True</property>
                     <property name="position">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkBox" id="speaker_test_error">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="orientation">vertical</property>
+                    <child>
+                      <object class="GtkSeparator" id="speaker_test_error_separator">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="margin_bottom">10</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="speaker_test_error_text">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="wrap">True</property>
+                        <property name="xalign">0</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">3</property>
                   </packing>
                 </child>
               </object>

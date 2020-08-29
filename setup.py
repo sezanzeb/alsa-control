@@ -30,8 +30,5 @@ DistUtilsExtra.auto.setup(
     data_files=[
         ('share/alsacontrol/', ['data/asoundrc-template']),
         ('/etc/xdg/autostart/', ['data/alsacontrol-daemon.desktop'])
-    ],
-    install_requires=[
-         'pyalsaaudio',
-     ],
+    ]
 )

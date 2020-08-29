@@ -27,11 +27,16 @@ import os
 import alsaaudio
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
+gi.require_version('GLib', '2.0')
+from gi.repository import Gtk, GLib
 
-from alsacontrol.alsa import get_volume, set_volume, toggle_mute, is_muted
-from alsacontrol.bindings import Bindings, get_volume_string, get_volume_icon
+from alsacontrol.alsa import get_volume, set_volume, toggle_mute, is_muted, \
+    get_devices, get_outputs, get_full_pcm_name, get_device, get_output
+from alsacontrol.bindings import Bindings, get_volume_string, \
+    get_volume_icon, get_error_advice
 from alsacontrol.data import get_data_path
+from alsacontrol.config import get_config
+from alsacontrol.asoundrc import setup_asoundrc
 
 
 class ALSAControlWindow:
@@ -46,11 +51,78 @@ class ALSAControlWindow:
         self.builder = builder
 
         self.initialize_volume_slider()
+        self.populate_devices_dropdown()
+
+        self.speaker_test_process = None
 
         window = builder.get_object('alsacontrol_window')
         window.show_all()
 
+        speaker_test_error = builder.get_object('speaker_test_error')
+        speaker_test_error.hide()
+
+        GLib.timeout_add(1000, self.refresh_devices)
+
         Gtk.main()
+
+    def refresh_devices(self):
+        """Refresh the list of devices for both input and output."""
+        if self.bindings.log_new_pcms():
+            self.populate_devices_dropdown()
+        return True
+
+    def populate_devices_dropdown(self):
+        """Get all output options and fill them into the dropdowns."""
+        device_selection = self.builder.get_object('output_device_selection')
+        devices = get_devices(alsaaudio.PCM_PLAYBACK)  # alsaaudio.cards()
+        device_selection.remove_all()
+        for device in devices:
+            device_selection.append(device, device)
+
+        # select the currently used device
+        active = get_device(get_config().get('pcm_output', 'null'))
+        if active in devices:
+            active_index = devices.index(active)
+            if device_selection.get_active() != active_index:
+                print('set_active', device_selection.get_active(), active_index)
+                device_selection.set_active(active_index)
+
+    def populate_modes_dropdown(self, device):
+        """For the selected device, write the options into the UI."""
+        output_selection = self.builder.get_object('output_mode_selection')
+        output_selection.remove_all()
+
+        if device is None:
+            return
+
+        outputs = get_outputs(device, alsaaudio.PCM_PLAYBACK)
+        for output in outputs:
+            output_selection.append(output, output)
+
+        # select the currently used output
+        active = get_output(get_config().get('pcm_output', 'null'))
+        if active in outputs:
+            active_index = outputs.index(active)
+            if output_selection.get_active() != active_index:
+                output_selection.set_active(active_index)
+
+    def on_device_selected(self, device):
+        self.populate_modes_dropdown(device.get_active_text())
+
+    def on_mode_selected(self, mode):
+        """Actually set the current default pcm."""
+        mode = mode.get_active_text()
+        if mode is None:
+            # happens when the device is changed
+            return
+
+        output_selection = self.builder.get_object('output_mode_selection')
+        device_selection = self.builder.get_object('output_device_selection')
+        device = device_selection.get_active_text()
+        mode = output_selection.get_active_text()
+        pcm_name = get_full_pcm_name(device, mode, alsaaudio.PCM_PLAYBACK)
+        get_config().set('pcm_output', pcm_name)
+        setup_asoundrc()
 
     def initialize_volume_slider(self):
         """Reflect the current volume."""
@@ -76,13 +148,42 @@ class ALSAControlWindow:
         volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True)
         self.refresh_output_state(volume, muted)
 
-    def on_test_speaker_clicked(self, button):
+    def on_test_speaker_clicked(self, _):
         """Test the speaker setup by playing sounds."""
-        test_running = self.bindings.toggle_speaker_test()
-        if test_running:
+        self.bindings.toggle_speaker_test()
+        # after some delay check if it is still running,
+        # to show potential errors
+        GLib.timeout_add(100, self.check_speaker_test)
+
+    def check_speaker_test(self):
+        """Adjust the GUI to the speaker test state."""
+        state, error = self.bindings.check_speaker_test()
+
+        builder = self.builder
+        button = builder.get_object('output_test')
+        speaker_test_error = builder.get_object('speaker_test_error')
+        speaker_test_error_text = builder.get_object('speaker_test_error_text')
+
+        if error:
+            # Show it in an extra label, not a dialog, because I think
+            # they are annoying.
+            speaker_test_error.show()
+            advice = get_error_advice(error)
+            if advice is not None:
+                speaker_test_error_text.set_label(
+                    '{}\n\n{}'.format(error, advice)
+                )
+            else:
+                speaker_test_error_text.set_label(error)
+        else:
+            speaker_test_error.hide()
+
+        if state:
             button.set_label('Stop Test')
+            return True
         else:
             button.set_label('Test Speaker')
+            return False
 
     def refresh_output_state(self, volume, muted):
         """Refresh icons and labels depending on mute and volume state"""

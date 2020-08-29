@@ -52,12 +52,14 @@ Features
 - [x] Show a volume meter as notification on volume changes or mute toggling
 - [x] Change the volume of soundcards without Master controls with softvol
 - [x] Generate an asoundrc file that is automatically included in ~/.asoundrc based on config
-- [ ] Add a GUI with sliders and mute buttons for the volume of both input and output
-- [ ] Add button to test the speaker setup
-- [ ] Add a dropdown to change input and output pcm devices (which modifies softvols pcm device) and also make jack selectable if available
+- [ ] Add a GUI with sliders and mute buttons for the volume of both input and [x] output
+- [x] Always show up to date devices in the GUI, for example when a new USB device was connected while the GUI was open.
+- [x] Add button to test the speaker setup
+- [x] Add a dropdown to change output pcm devices (which modifies softvols pcm device) and also make jack selectable if available
+- [ ] Add a list of input devices and show their input level
 - [ ] Notify about new detected audio devices with a button to open the GUI to select it
-- [ ] Input and output meter
 - [ ] Provide .deb files and get it into the AUR
+- [x] Show speaker-test errors in the GUI
 
 Quality
 - Provide tooltips for anything that is not easily self explanatory

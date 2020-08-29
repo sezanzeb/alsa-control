@@ -34,10 +34,10 @@ gi.require_version('Notify', '0.7')
 gi.require_version('GLib', '2.0')
 from gi.repository import Notify, GLib
 
-from alsacontrol.asoundrc import setup
+from alsacontrol.asoundrc import setup_asoundrc
 from alsacontrol.logger import logger, update_verbosity, log_info
 from alsacontrol.alsa import set_volume, get_volume, toggle_mute,\
-    is_muted, to_perceived_volume
+    is_muted, to_perceived_volume, to_mixer_volume
 from alsacontrol.bindings import get_volume_icon
 
 
@@ -59,24 +59,24 @@ class Daemon(service.Object):
         # Especially going down by 10% and up by 10% should end up at the
         # initial volume.
         # alsamixer only provides a resolution of 100 and softvol of max 1048
-        self.perceived_volume = to_perceived_volume(get_volume())
+        self.perceived_volume = to_perceived_volume(
+            get_volume(alsaaudio.PCM_PLAYBACK)
+        )
 
         super().__init__(*args, **kwargs)
 
     def check_volume_integrity(self):
         """If the internal volume is out of touch with the mixer, reset."""
-        expected_mixer_volume = self.to_mixer_volume(self.perceived_volume)
-        actual_mixer_volume = get_volume()
-        if expected_mixer_volume - actual_mixer_volume > 0.01:
+        expected_mixer_volume = to_mixer_volume(self.perceived_volume)
+        actual_mixer_volume = get_volume(alsaaudio.PCM_PLAYBACK)
+        if abs(expected_mixer_volume - actual_mixer_volume) > 0.01:
             logger.debug(
                 'Resetting the internal volume '
                 '(%s) to the mixers actual value (%s)',
                 expected_mixer_volume,
                 actual_mixer_volume
             )
-            self.perceived_volume = to_perceived_volume(
-                get_volume()
-            )
+            self.perceived_volume = to_perceived_volume(actual_mixer_volume)
 
     def show_notification(self, text, icon, hints, short=False):
         """Display a notification in the GUI that replaces the old one.
@@ -121,7 +121,7 @@ class Daemon(service.Object):
         self.check_volume_integrity()
         logger.debug('Received volume change of %s', volume)
         perceived_new = max(0, min(1, self.perceived_volume + volume))
-        mixer_new = self.to_mixer_volume(perceived_new)
+        mixer_new = to_mixer_volume(perceived_new)
         self.perceived_volume = perceived_new
         set_volume(mixer_new, alsaaudio.PCM_PLAYBACK)
         self.notify(perceived_new, is_muted())
@@ -138,7 +138,7 @@ class Daemon(service.Object):
     def notify(self, volume, muted):
         """Display a pretty notification for volume and mute state."""
         # various icons to visualize the volume
-        get_volume_icon(volume, muted)
+        icon = get_volume_icon(volume, muted)
 
         volume_string = '{}%'.format(int(volume * 100))
 
@@ -162,7 +162,7 @@ if __name__ == '__main__':
 
     log_info()
 
-    setup()
+    setup_asoundrc()
 
     # make sure our .asoundrc is included so that the mixer name exists
     session_bus = dbus.SessionBus(mainloop=DBusGMainLoop())
