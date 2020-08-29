@@ -272,6 +272,7 @@
                         <property name="round_digits">0</property>
                         <property name="draw_value">False</property>
                         <property name="value_pos">left</property>
+                        <signal name="value-changed" handler="on_input_volume_change" swapped="no"/>
                       </object>
                       <packing>
                         <property name="expand">True</property>

@@ -162,9 +162,9 @@ if __name__ == '__main__':
 
     log_info()
 
+    # make sure alsacontrols asoundrc is included so that the mixer exists
     setup_asoundrc()
 
-    # make sure our .asoundrc is included so that the mixer name exists
     session_bus = dbus.SessionBus(mainloop=DBusGMainLoop())
     name = dbus.service.BusName('com.alsacontrol.Volume', session_bus)
     Daemon(session_bus, '/')

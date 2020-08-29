@@ -19,7 +19,7 @@
 # along with ALSA-Control.  If not, see <https://www.gnu.org/licenses/>.
 
 
-"""All GUI events call this module, independent from the used toolkit."""
+"""Stuff that is only relevant to the GUI and independent of the toolkit."""
 
 
 import os
@@ -28,6 +28,7 @@ import subprocess
 import sys
 from argparse import ArgumentParser
 
+import dbus
 import alsaaudio
 
 from alsacontrol.alsa import get_cards, get_card
@@ -120,7 +121,7 @@ def get_current_output():
 
     cards = get_cards(alsaaudio.PCM_PLAYBACK)
     if len(cards) == 0:
-        logger.error('Could not find any output pcm')
+        logger.error('Could not find any output PCM')
         return None, None
 
     card = get_card(pcm_output)
@@ -130,6 +131,26 @@ def get_current_output():
 
     d = cards.index(card)
     return d, card
+
+
+def eavesdrop_volume_notifications(mainloop, callback):
+    """Listen on the notification DBus for ALSA-Control messages."""
+    bus = dbus.SessionBus(mainloop=mainloop)
+    bus.add_match_string_non_blocking(','.join([
+        "interface='org.freedesktop.Notifications'",
+        "member='Notify'",
+        "eavesdrop='true'"
+    ]))
+
+    def message_eavsedropped(_, msg):
+        """Now figure out if this message is from ALSA-Control."""
+        args = msg.get_args_list()
+        if len(args) > 0:
+            application = str(args[0])
+            if application == 'ALSA-Control':
+                callback()
+
+    bus.add_message_filter(message_eavsedropped)
 
 
 class Bindings:
@@ -267,10 +288,10 @@ class Bindings:
             pass
         else:
             for pcm in self.pcms.difference(pcms):
-                logger.info('Removed pcm %s', pcm)
+                logger.info('PCM %s was removed', pcm)
                 changes += 1
             for pcm in pcms.difference(self.pcms):
-                logger.info('Found new pcm %s', pcm)
+                logger.info('Found new PCM %s', pcm)
                 changes += 1
         self.pcms = inputs.union(outputs)
         return changes > 0

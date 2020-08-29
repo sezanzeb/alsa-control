@@ -127,7 +127,7 @@ def set_volume(volume, pcm, nonlinear=False):
     elif pcm == alsaaudio.PCM_CAPTURE:
         mixer_name = INPUT_VOLUME
     else:
-        raise ValueError('Unsupported pcm {}'.format(pcm))
+        raise ValueError('Unsupported PCM {}'.format(pcm))
 
     if nonlinear:
         volume = to_mixer_volume(volume)
@@ -153,14 +153,14 @@ def get_volume(pcm, nonlinear=False):
     elif pcm == alsaaudio.PCM_CAPTURE:
         mixer_name = INPUT_VOLUME
     else:
-        raise ValueError('Unsupported pcm {}'.format(pcm))
+        raise ValueError('Unsupported PCM {}'.format(pcm))
 
     if mixer_name not in alsaaudio.mixers():
         logger.warning('Could not find mixer %s', mixer_name)
         return 0
 
     # TODO in order for the input mixer to be known, it seems like some sound
-    #  needs to be captured, similar to I need to run the alsa test to
+    #  needs to be captured. I also need to run the alsa test to
     #  see the output-volume mixer
     mixer = alsaaudio.Mixer(mixer_name)
     mixer_volume = mixer.getvolume(pcm)[0] / 100
@@ -171,9 +171,9 @@ def get_volume(pcm, nonlinear=False):
     return mixer_volume
 
 
-def toggle_mute():
+def toggle_mute(mixer_name=OUTPUT_MUTE):
     """Mute or unmute."""
-    mixer = alsaaudio.Mixer(OUTPUT_MUTE)
+    mixer = alsaaudio.Mixer(mixer_name)
     if mixer.getmute()[0]:
         mixer.setmute(0)
         return False
@@ -181,7 +181,7 @@ def toggle_mute():
     return True
 
 
-def is_muted():
+def is_muted(mixer_name=OUTPUT_MUTE):
     """Figure out if the output is muted or not."""
-    mixer = alsaaudio.Mixer(OUTPUT_MUTE)
+    mixer = alsaaudio.Mixer(mixer_name)
     return mixer.getmute()[0] == 1
