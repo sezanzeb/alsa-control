@@ -13,8 +13,6 @@ pip3 install pyalsaaudio
 python3 setup.py install
 ```
 
-**User interface**
-
 ```
 alsacontrol-gtk
 ```
@@ -22,8 +20,6 @@ alsacontrol-gtk
 <p align="center">
     <img src="data/input-devices.png"/>
 </p>
-
-**Starting the daemon**
 
 Start the daemon. You can put this into your autostart.
 
