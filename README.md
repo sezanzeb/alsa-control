@@ -1,7 +1,10 @@
 # ALSA Control
 
 Since ALSA provides dmix for soundcards that don't support multiplexing and softvol for those that can't control their volume,
-it is not necessary to run pulseaudio for that. This app is intended to replace pavucontrol in that case.
+it is not necessary to run pulseaudio for that.
+
+This software provides multiplexing, volume and muting capabilities by creating .asoundrc configurations, while the GUI
+works as a replacement for pavucontrol.
 
 ## Usage
 
