@@ -26,7 +26,6 @@ import os
 from alsacontrol.data import get_data_path
 from alsacontrol.config import get_config
 from alsacontrol.logger import logger
-from alsacontrol.alsa import play_silence, record_to_nowhere
 
 
 alsactl_asoundrc = os.path.expanduser('~/.config/alsacontrol/asoundrc')
@@ -45,7 +44,7 @@ def add_include():
         contents = file.read()
 
     with open(os.path.expanduser('~/.asoundrc'), 'a') as file:
-        include = '<{}>'.format(alsactl_asoundrc)
+        include = f'<{alsactl_asoundrc}>'
         if include not in contents:
             file.write(include)
 

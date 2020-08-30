@@ -239,10 +239,7 @@ class ALSAControlWindow:
         speaker_test_error = builder.get_object('speaker_test_error')
         speaker_test_error.hide()
 
-        eavesdrop_volume_notifications(
-            DBusGMainLoop(),
-            self.volume_changed_externally
-        )
+        eavesdrop_volume_notifications(self.volume_changed_externally)
 
         GLib.timeout_add(500, self.refresh_cards)
 
@@ -403,7 +400,7 @@ class ALSAControlWindow:
             advice = get_error_advice(error)
             if advice is not None:
                 speaker_test_error_text.set_label(
-                    '{}\n\nHelp:\n{}'.format(error, advice)
+                    f'{error}\n\nHelp:\n{advice}'
                 )
             else:
                 speaker_test_error_text.set_label(error)

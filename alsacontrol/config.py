@@ -47,12 +47,12 @@ def _modify_config(config_contents, key, value):
         split = split[:-1]
 
     found = False
-    setting = '{}={}'.format(key, value)
+    setting = f'{key}={value}'
     for i, line in enumerate(split):
         strip = line.strip()
         if strip.startswith('#'):
             continue
-        if strip.startswith('{}='.format(key)):
+        if strip.startswith(f'{key}='):
             # replace the setting
             logger.debug('Overwriting "%s=%s" in config', key, value)
             split[i] = setting

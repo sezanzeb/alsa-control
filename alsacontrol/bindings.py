@@ -63,8 +63,7 @@ def get_volume_string(volume, muted):
     """Return a string representing the current output state."""
     if not muted:
         return f'{round(volume * 100)}%'
-    else:
-        return 'muted'
+    return 'muted'
 
 
 def get_error_advice(error):
@@ -77,7 +76,7 @@ def get_error_advice(error):
     if 'No such card' in error:
         pcm_output = get_config().get('pcm_output')
         return (
-            'The pcm card "{}" does not exist. '.format(pcm_output) +
+            f'The pcm card "{pcm_output}" does not exist. ' +
             'Try to select something different.'
         )
     return None
@@ -94,7 +93,7 @@ def select_output_pcm(card):
     # figure out if this is an actual hardware device or not
     cards = alsaaudio.cards()
     if card in cards:
-        pcm_name = 'hw:CARD={}'.format(card)
+        pcm_name = f'hw:CARD={card}'
     else:
         pcm_name = card  # otherwise probably jack
     get_config().set('pcm_output', pcm_name)
@@ -112,7 +111,7 @@ def select_input_pcm(card):
     # figure out if this is an actual hardware device or not
     cards = alsaaudio.cards()
     if card in cards:
-        pcm_name = 'sysdefault:CARD={}'.format(card)
+        pcm_name = f'sysdefault:CARD={card}'
     else:
         pcm_name = card  # otherwise probably jack
     get_config().set('pcm_input', pcm_name)
@@ -147,11 +146,24 @@ def get_current_card(source):
         logger.warning('Found unknown %s "%s" in config', source, pcm_name)
         return None, None
 
-    d = cards.index(card)
-    return d, card
+    index = cards.index(card)
+    return index, card
 
 
-def eavesdrop_volume_notifications(mainloop, callback):
+def read_from_std(source):
+    """Read all the contents from stderr or stdout of the speaker test."""
+    lines = []
+    while True:
+        line = source.readline()
+        if len(line) == 0:
+            break
+        line = line[:-1].decode()
+        if len(line) > 0:
+            lines.append(line)
+    return lines
+
+
+def eavesdrop_volume_notifications(callback):
     """Listen on the notification DBus for ALSA-Control messages."""
     bus = get_bus()
     bus.add_match_string_non_blocking(','.join([
@@ -202,11 +214,10 @@ class Bindings:
         """
         if self.speaker_test_process is None:
             num_channels = get_config().get('num_output_channels', 2)
-            cmd = 'speaker-test -D default -c {} -twav'.format(num_channels)
+            cmd = f'speaker-test -D default -c {num_channels} -twav'.split()
             logger.info('Testing speakers, %d channels', num_channels)
             process = subprocess.Popen(
                 cmd,
-                shell=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 preexec_fn=os.setsid
@@ -216,18 +227,6 @@ class Bindings:
 
         self.stop_speaker_test()
         return False
-
-    def read_from_std(self, source):
-        """Read all the contents from stderr or stdout of the speaker test."""
-        lines = []
-        while True:
-            line = source.readline()
-            if len(line) == 0:
-                break
-            line = line[:-1].decode()
-            if len(line) > 0:
-                lines.append(line)
-        return lines
 
     def check_speaker_test(self):
         """Return a tuple of (running, error) for the speaker test."""
@@ -245,8 +244,8 @@ class Bindings:
                 logger.error('speaker-test failed (code %d):', return_code)
                 msg = []
 
-                stderr = self.read_from_std(self.speaker_test_process.stderr)
-                stdout = self.read_from_std(self.speaker_test_process.stdout)
+                stderr = read_from_std(self.speaker_test_process.stderr)
+                stdout = read_from_std(self.speaker_test_process.stdout)
 
                 self.speaker_test_process = None
 
@@ -263,7 +262,7 @@ class Bindings:
                         msg.append(line)
 
                 if len(msg) == 0:
-                    msg = 'Unknown error. Exit code {}'.format(return_code)
+                    msg = f'Unknown error. Exit code {return_code}'
                 else:
                     msg = '\n'.join(msg)
 
@@ -281,7 +280,7 @@ class Bindings:
     def stop_speaker_test(self):
         """Stop the speaker test if it is running."""
         if self.speaker_test_process is None:
-            return False
+            return
 
         return_code = self.speaker_test_process.poll()
         if return_code is None:
@@ -295,7 +294,6 @@ class Bindings:
                     'been stopped'
                 )
                 # It has already been stopped
-                pass
             self.speaker_test_process = None
 
     def log_new_pcms(self):

@@ -1,12 +1,8 @@
 # ALSA Control
 
-**This is in a beta state!**
-
-Making ALSA easy to use.
-
-Since ALSA provides dmix for soundcards that don't support multiplexing, it is not necessary to run pulseaudio for that.
-Pulseaudio can have issues with sample rates of USB devices, which will be avoided by not using it.
-Furthermore, pure ALSA should have the lowest possible audio latency.
+Since ALSA provides dmix for soundcards that don't support multiplexing and softvol for those that can't control their volume,
+it is not necessary to run pulseaudio for that. You can use this tool to select our input and output devices and automatically
+configure dmix and softvol for you.
 
 ## Usage
 
@@ -31,7 +27,7 @@ alsacontrol-gtk
 </p>
 
 
-**Starting the daemon to control volume via multimedia keys**
+**Starting the daemon**
 
 Start the daemon. You can put this into your autostart.
 
@@ -62,7 +58,7 @@ sudo python3 setup.py install && python3 tests/test.py
 
 ## Features
 
-Basically provide everything that is needed to comfortably use ALSA in a GUI
+Basically provide everything that is needed to comfortably use ALSA without pulseaudio in a GUI
 
 - [x] Show a volume meter as notification on volume changes or mute toggling
 - [x] Change the volume of soundcards without Master controls with softvol
@@ -73,8 +69,7 @@ Basically provide everything that is needed to comfortably use ALSA in a GUI
 - [x] Add a button to test the speaker setup
 - [x] Show speaker-test errors in the GUI
 - [x] Add a dropdown to change output pcm devices
-- [x] Jack support
+- [x] Jack support (first start jack, then the GUI to select it)
 - [x] Add a list of input devices and show their input level
-- [ ] Notify about new detected audio devices with a button to open the GUI to select it
 - [ ] Provide .deb files and get it into the AUR
 

@@ -34,7 +34,7 @@ if __name__ == "__main__":
     if len(modules) > 0:
         # for example `tests/test.py ConfigTest.testFirstLine`
         testsuite = unittest.defaultTestLoader.loadTestsFromNames(
-            ['testcases.{}'.format(module) for module in modules]
+            [f'testcases.{module}' for module in modules]
         )
     else:
         # run all tests by default

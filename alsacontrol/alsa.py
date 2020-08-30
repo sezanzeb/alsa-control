@@ -77,7 +77,6 @@ def play_silence():
             'Could not initialize output mixer. '
             'Try setting a different device.'
         )
-        pass
 
 
 def record_to_nowhere():
@@ -97,7 +96,6 @@ def record_to_nowhere():
             'Could not initialize input mixer. '
             'Try setting a different device.'
         )
-        pass
 
 
 def get_default_card(pcm_type):
@@ -108,13 +106,14 @@ def get_default_card(pcm_type):
     pcm_type : int
         one of alsaaudio.PCM_CAPTURE or alsaaudio.PCM_PLAYBACK
     """
-    pcms = alsaaudio.pcms()
+    pcms = alsaaudio.pcms(pcmtype=pcm_type)
     for pcm in pcms:
         if 'Generic' in pcm:
             return pcm
         if 'CARD=' in pcm:
             return pcm
     logger.error('Could not find a default card')
+    return None
 
 
 def get_card(pcm):
@@ -173,7 +172,7 @@ def set_volume(volume, pcm_type, nonlinear=False):
     elif pcm_type == alsaaudio.PCM_CAPTURE:
         mixer_name = INPUT_VOLUME
     else:
-        raise ValueError('Unsupported PCM {}'.format(pcm_type))
+        raise ValueError(f'Unsupported PCM {pcm_type}')
 
     if mixer_name not in alsaaudio.mixers():
         logger.error('Could not find mixer %s', mixer_name)
@@ -208,7 +207,7 @@ def get_volume(pcm, nonlinear=False):
     elif pcm == alsaaudio.PCM_CAPTURE:
         mixer_name = INPUT_VOLUME
     else:
-        raise ValueError('Unsupported PCM {}'.format(pcm))
+        raise ValueError(f'Unsupported PCM {pcm}')
 
     if mixer_name not in alsaaudio.mixers():
         logger.error('Could not find mixer %s', mixer_name)

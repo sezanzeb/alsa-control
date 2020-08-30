@@ -141,7 +141,7 @@ class Daemon(service.Object):
         # various icons to visualize the volume
         icon = get_volume_icon(volume, muted)
 
-        volume_string = '{}%'.format(int(volume * 100))
+        volume_string = f'{int(volume * 100)}%'
 
         self.show_notification(volume_string, icon, {
             'value': GLib.Variant.new_int32(volume * 100)
