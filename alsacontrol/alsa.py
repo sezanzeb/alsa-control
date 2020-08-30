@@ -63,6 +63,7 @@ def play_silence():
     Otherwise 'Unable to find mixer control alsacontrol-output-mute'
     will be thrown at the start.
     """
+    logger.debug('Trying to play sound to make the mixers visible')
     try:
         pcm = alsaaudio.PCM(
             type=alsaaudio.PCM_PLAYBACK,
@@ -74,8 +75,8 @@ def play_silence():
         pcm.write(data)
     except alsaaudio.ALSAAudioError:
         logger.error(
-            'Could not initialize output mixer. '
-            'Try setting a different device.'
+            'Could not initialize output mixer, '
+            'try setting a different device.'
         )
 
 
@@ -85,6 +86,7 @@ def record_to_nowhere():
     Otherwise 'Unable to find mixer control alsacontrol-input-mute'
     will be thrown at the start.
     """
+    logger.debug('Trying to capture sound to make the mixers visible')
     try:
         pcm = alsaaudio.PCM(
             type=alsaaudio.PCM_CAPTURE,
