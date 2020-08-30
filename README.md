@@ -6,7 +6,7 @@ it is not necessary to run pulseaudio for that.
 This software provides multiplexing, volume and muting capabilities by creating .asoundrc configurations, while the GUI
 works as a replacement for pavucontrol.
 
-Not having pulseaudio is not compatible with everything. For example, Discord in Firefox and Terraria needed Pulseaudio.
+Not having pulseaudio is not compatible with everything. For example, Discord in Firefox and Terraria were silent without Pulseaudio.
 
 ## Usage
 
