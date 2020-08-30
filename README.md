@@ -8,8 +8,6 @@ works as a replacement for pavucontrol.
 
 ## Usage
 
-It will try to select a default soundcard when no config file exists yet. The config is in `~/.config/alsacontrol/config`
-
 ```
 pip3 install pyalsaaudio
 python3 setup.py install
