@@ -60,11 +60,10 @@ sudo python3 setup.py install && python3 tests/test.py
 ```
 
 
-## Goals
+## Features
 
 Basically provide everything that is needed to comfortably use ALSA in a GUI
 
-Features
 - [x] Show a volume meter as notification on volume changes or mute toggling
 - [x] Change the volume of soundcards without Master controls with softvol
 - [x] Generate an asoundrc file that is automatically included in ~/.asoundrc based on config
@@ -78,12 +77,4 @@ Features
 - [x] Add a list of input devices and show their input level
 - [ ] Notify about new detected audio devices with a button to open the GUI to select it
 - [ ] Provide .deb files and get it into the AUR
-
-Quality
-- Provide tooltips for anything that is not easily self explanatory
-- Show when the user is supposed to restart their applications for it to take effect
-- Make it easy to write GUIs for this in alternative libraries by properly separating code
-- Provide well written docstrings
-- Don't automatically switch devices when the current device is not available. But maybe add user defined fallback devices
-- Be verbose with logs, provide debug logs. All logs start uppercase
 
