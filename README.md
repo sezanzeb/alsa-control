@@ -23,8 +23,6 @@ alsacontrol-gtk
 
 <p align="center">
     <img src="data/output-device.png"/>
-</p>
-<p align="center">
     <img src="data/input-devices.png"/>
 </p>
 
