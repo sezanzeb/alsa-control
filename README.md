@@ -73,8 +73,9 @@ Basically provide everything that is needed to comfortably use ALSA without puls
 - [x] Add a list of input devices and show their input level
 - [ ] Provide .deb files and get it into the AUR
 
-## Downsides
+## Jack
 
-Changing the volume via softvol is sometimes slow and doesn't feel responsive. Firefox seems to prefer
+Changing jacks volume via softvol doesn't feel responsive. Firefox seems to prefer
 talking to jack directly over using the default device provided by the generated asoundrc, so the
-volume change doesn't affect it.
+volume change doesn't affect it. Before starting jack, the ALSA-Control gui needs to be closed because
+jack can't acquire the input device as long as the level is monitored.
