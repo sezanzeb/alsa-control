@@ -22,8 +22,8 @@ alsacontrol-gtk
 ```
 
 <p align="center">
-    <img src="data/output-device.png"/>
-    <img src="data/input-devices.png"/>
+    <img src="data/output-device.png" width="40%"/>
+    <img src="data/input-devices.png" width="40%"/>
 </p>
 
 
