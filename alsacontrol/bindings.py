@@ -19,7 +19,7 @@
 # along with ALSA-Control.  If not, see <https://www.gnu.org/licenses/>.
 
 
-"""Stuff that is only relevant to the GUI and independent of the toolkit."""
+"""Stuff that honestly should be separated into multiple files."""
 
 
 import os
@@ -28,13 +28,14 @@ import subprocess
 import sys
 from argparse import ArgumentParser
 
-import dbus
 import alsaaudio
 
-from alsacontrol.alsa import get_cards, get_card
+from alsacontrol.alsa import get_cards, get_card, play_silence, \
+    record_to_nowhere
 from alsacontrol.logger import logger, update_verbosity, log_info
 from alsacontrol.config import get_config
 from alsacontrol.asoundrc import setup_asoundrc
+from alsacontrol.dbus import get_bus
 
 
 def get_volume_icon(volume, muted):
@@ -70,7 +71,7 @@ def get_error_advice(error):
     """Get some help for errors."""
     if 'resource busy' in error:
         return (
-            'You can try to run `lsof | grep /dev/snd/` to '
+            'You can try to run `lsof +D /dev/snd/` to '
             'see which process is blocking it. It might be jack.'
         )
     if 'No such card' in error:
@@ -91,13 +92,11 @@ def select_output_pcm(card):
         "Generic", "jack", ...
     """
     # figure out if this is an actual hardware device or not
-    pcms = alsaaudio.pcms(alsaaudio.PCM_PLAYBACK)
-    for pcm in pcms:
-        if card in pcm and ':CARD=' in pcm:
-            pcm_name = 'hw:CARD={}'.format(card)
-            break
+    cards = alsaaudio.cards()
+    if card in cards:
+        pcm_name = 'hw:CARD={}'.format(card)
     else:
-        pcm_name = card
+        pcm_name = card  # otherwise probably jack
     get_config().set('pcm_output', pcm_name)
     setup_asoundrc()
 
@@ -111,33 +110,41 @@ def select_input_pcm(card):
         "Generic", "jack", ...
     """
     # figure out if this is an actual hardware device or not
-    pcms = alsaaudio.pcms(alsaaudio.PCM_CAPTURE)
-    match = filter(lambda pcm: f'sysdefault:CARD={card}' in pcm, pcms)
-    pcm_name = next(match, card)  # otherwise probably jack
+    cards = alsaaudio.cards()
+    if card in cards:
+        pcm_name = 'sysdefault:CARD={}'.format(card)
+    else:
+        pcm_name = card  # otherwise probably jack
     get_config().set('pcm_input', pcm_name)
     setup_asoundrc()
 
 
-def get_current_output():
-    """Get a tuple describing the current output selection based on config.
+def get_current_card(source):
+    """Get a tuple describing the current card selection based on config.
+
+    Parameters
+    ----------
+    source : string
+        one of 'pcm_input' or 'pcm_output'
 
     Returns
     -------
     A tuple of (d, card) with d being the index in
     the list of options from get_cards.
     """
-    pcm_output = get_config().get('pcm_output', None)
-    if pcm_output is None:
+    pcm_name = get_config().get(source, 'null')
+    if pcm_name == 'null':
+        logger.warning('No input selected')
         return None, None
 
-    cards = get_cards(alsaaudio.PCM_PLAYBACK)
+    cards = get_cards()
     if len(cards) == 0:
-        logger.error('Could not find any output PCM')
+        logger.error('Could not find any card')
         return None, None
 
-    card = get_card(pcm_output)
+    card = get_card(pcm_name)
     if card not in cards:
-        logger.warning('Found unknown card %s in config', card)
+        logger.warning('Found unknown %s "%s" in config', source, pcm_name)
         return None, None
 
     d = cards.index(card)
@@ -146,7 +153,7 @@ def get_current_output():
 
 def eavesdrop_volume_notifications(mainloop, callback):
     """Listen on the notification DBus for ALSA-Control messages."""
-    bus = dbus.SessionBus(mainloop=mainloop)
+    bus = get_bus()
     bus.add_match_string_non_blocking(','.join([
         "interface='org.freedesktop.Notifications'",
         "member='Notify'",
@@ -179,10 +186,14 @@ class Bindings:
         update_verbosity(options.debug)
         log_info()
 
+        # discover mixers
+        play_silence()
+        record_to_nowhere()
+
         self.output_volume = 0
         self.speaker_test_process = None
 
-        self.pcms = None
+        self.cards = None
 
     def toggle_speaker_test(self):
         """Run the speaker-test script or stop it, if it is running.
@@ -289,19 +300,18 @@ class Bindings:
 
     def log_new_pcms(self):
         """Write to the console if new cards are added. Return True if so."""
-        inputs = set(alsaaudio.pcms(alsaaudio.PCM_CAPTURE))
-        outputs = set(alsaaudio.pcms(alsaaudio.PCM_PLAYBACK))
-        pcms = inputs.union(outputs)
+        # using .cards() isntead of .pcms() is MUCH faster
+        cards = set(get_cards())
         changes = 0
-        if self.pcms is None:
+        if self.cards is None:
             # first time running, don't log yet
             pass
         else:
-            for pcm in self.pcms.difference(pcms):
+            for pcm in self.cards.difference(cards):
                 logger.info('PCM %s was removed', pcm)
                 changes += 1
-            for pcm in pcms.difference(self.pcms):
+            for pcm in cards.difference(self.cards):
                 logger.info('Found new PCM %s', pcm)
                 changes += 1
-        self.pcms = inputs.union(outputs)
+        self.cards = cards
         return changes > 0

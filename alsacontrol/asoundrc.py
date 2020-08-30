@@ -26,6 +26,7 @@ import os
 from alsacontrol.data import get_data_path
 from alsacontrol.config import get_config
 from alsacontrol.logger import logger
+from alsacontrol.alsa import play_silence, record_to_nowhere
 
 
 alsactl_asoundrc = os.path.expanduser('~/.config/alsacontrol/asoundrc')
@@ -79,8 +80,12 @@ def create_asoundrc():
     pcm_output = get_config().get('pcm_output', 'null')
     if pcm_input == 'null':
         logger.warning('No input specified')
+    else:
+        logger.info('Using input %s', pcm_input)
     if pcm_output == 'null':
         logger.warning('No output specified')
+    else:
+        logger.info('Using output %s', pcm_output)
 
     if 'CARD=' not in pcm_output:
         # software output, for example jack

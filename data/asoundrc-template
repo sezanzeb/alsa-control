@@ -82,6 +82,13 @@ pcm.alsacontrol-input-softvol {{
     resolution 2
 }}
 
+# Have data from jack in the correct format using a plug, so
+# that its input level can be monitored.
+pcm.alsacontrol-jack-input {{
+    type plug
+    slave.pcm jack
+}}
+
 pcm.!default {{
     type asym
     playback.pcm {{

@@ -24,8 +24,10 @@
 
 import numpy as np
 
+import dbus
 import alsaaudio
 from alsacontrol.logger import logger
+from alsacontrol.dbus import get_bus
 
 
 INPUT_VOLUME = 'alsacontrol-input-volume'
@@ -46,14 +48,56 @@ def to_mixer_volume(volume):
 
 def get_level(pcm):
     """Get the current level of recording."""
-    # defaults to 2 channels and 16 bit on the default card
-    while True:
-        length, data = pcm.read()
-        if length > 0:
-            samples = np.frombuffer(data, dtype=np.int16)
-            level = np.max(np.abs(samples))
-            # in percent
-            return level / ((2 ** 16) / 2)
+    length, data = pcm.read()
+    if length > 0:
+        samples = np.frombuffer(data, dtype=np.int16)
+        level = np.max(np.abs(samples))
+        # in percent
+        return level / ((2 ** 16) / 2)
+    return None
+
+
+def play_silence():
+    """In order to make alsa see the mixers, play some silent audio.
+
+    Otherwise 'Unable to find mixer control alsacontrol-output-mute'
+    will be thrown at the start.
+    """
+    try:
+        pcm = alsaaudio.PCM(
+            type=alsaaudio.PCM_PLAYBACK,
+            channels=1,
+            periodsize=32,
+            device='default'
+        )
+        data = b'\x00' * 32
+        pcm.write(data)
+    except alsaaudio.ALSAAudioError:
+        logger.error(
+            'Could not initialize output mixer. '
+            'Try setting a different device.'
+        )
+        pass
+
+
+def record_to_nowhere():
+    """Similar problem as in play_silence with the input mixer.
+
+    Otherwise 'Unable to find mixer control alsacontrol-input-mute'
+    will be thrown at the start.
+    """
+    try:
+        pcm = alsaaudio.PCM(
+            type=alsaaudio.PCM_CAPTURE,
+            device='default'
+        )
+        pcm.read()
+    except alsaaudio.ALSAAudioError:
+        logger.error(
+            'Could not initialize input mixer. '
+            'Try setting a different device.'
+        )
+        pass
 
 
 def get_default_card(pcm_type):
@@ -89,20 +133,24 @@ def get_card(pcm):
     return None
 
 
-def get_cards(pcm_type):
-    """List all output cards, including options such as jack.
+def is_jack_running():
+    """Test if jack is running."""
+    try:
+        remote_object = get_bus().get_object(
+            'org.jackaudio.service',
+            '/org/jackaudio/Controller'
+        )
+        started = remote_object.IsStarted()
+        return started
+    except dbus.exceptions.DBusException:
+        return False
 
-    Parameters
-    ----------
-    pcm_type : int
-        one of alsaaudio.PCM_CAPTURE or alsaaudio.PCM_PLAYBACK
-    """
-    pcm_list = alsaaudio.pcms(pcm_type)
-    cards = []
-    for pcm in pcm_list:
-        card = get_card(pcm)
-        if card and len(card) > 0 and card not in cards:
-            cards.append(card)
+
+def get_cards():
+    """List all cards, including options such as jack."""
+    cards = alsaaudio.cards()
+    if is_jack_running():
+        cards.append('jack')
     if len(cards) == 0:
         logger.error('Could not find any card')
     return cards
@@ -127,6 +175,10 @@ def set_volume(volume, pcm_type, nonlinear=False):
     else:
         raise ValueError('Unsupported PCM {}'.format(pcm_type))
 
+    if mixer_name not in alsaaudio.mixers():
+        logger.error('Could not find mixer %s', mixer_name)
+        return
+
     if nonlinear:
         volume = to_mixer_volume(volume)
 
@@ -138,7 +190,6 @@ def set_volume(volume, pcm_type, nonlinear=False):
     if mixer_volume == current_mixer_volume:
         return
 
-    logger.debug('Setting the "%s" value to %s%%', mixer_name, mixer_volume)
     mixer.setvolume(mixer_volume)
 
 
@@ -160,13 +211,9 @@ def get_volume(pcm, nonlinear=False):
         raise ValueError('Unsupported PCM {}'.format(pcm))
 
     if mixer_name not in alsaaudio.mixers():
-        logger.warning('Could not find mixer %s', mixer_name)
+        logger.error('Could not find mixer %s', mixer_name)
         return 0
 
-    # TODO in order for the input mixer to be known, it seems like some sound
-    #  needs to be captured. I also need to run the alsa test to
-    #  see the output-volume mixer.
-    #  Arecord for a very short time? Calling get_level?
     mixer = alsaaudio.Mixer(mixer_name)
     mixer_volume = mixer.getvolume(pcm)[0] / 100
 
@@ -176,8 +223,12 @@ def get_volume(pcm, nonlinear=False):
     return mixer_volume
 
 
-def toggle_mute(mixer_name=OUTPUT_MUTE):
+def toggle_mute(mixer_name):
     """Mute or unmute."""
+    if mixer_name not in alsaaudio.mixers():
+        logger.error('Could not find mixer %s', mixer_name)
+        return False
+
     mixer = alsaaudio.Mixer(mixer_name)
     if mixer.getmute()[0]:
         mixer.setmute(0)
@@ -186,7 +237,20 @@ def toggle_mute(mixer_name=OUTPUT_MUTE):
     return True
 
 
+def set_mute(mixer_name, state):
+    """Set if the mixer should be muted or not."""
+    if mixer_name not in alsaaudio.mixers():
+        logger.error('Could not find mixer %s', mixer_name)
+        return
+    mixer = alsaaudio.Mixer(mixer_name)
+    mixer.setmute(state)
+
+
 def is_muted(mixer_name=OUTPUT_MUTE):
     """Figure out if the output is muted or not."""
+    if mixer_name not in alsaaudio.mixers():
+        logger.error('Could not find mixer %s', mixer_name)
+        return False
+
     mixer = alsaaudio.Mixer(mixer_name)
     return mixer.getmute()[0] == 1

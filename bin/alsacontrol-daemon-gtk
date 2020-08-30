@@ -36,8 +36,9 @@ from gi.repository import Notify, GLib
 
 from alsacontrol.asoundrc import setup_asoundrc
 from alsacontrol.logger import logger, update_verbosity, log_info
-from alsacontrol.alsa import set_volume, get_volume, toggle_mute,\
-    is_muted, to_perceived_volume, to_mixer_volume
+from alsacontrol.alsa import set_volume, get_volume, toggle_mute, \
+    is_muted, to_perceived_volume, to_mixer_volume, play_silence, \
+    record_to_nowhere, OUTPUT_MUTE
 from alsacontrol.bindings import get_volume_icon
 
 
@@ -132,7 +133,7 @@ class Daemon(service.Object):
     def toggle_muted(self):
         """Mute if unmuted, unmute if muted."""
         logger.debug('Received command to toggle mute')
-        muted = toggle_mute()
+        muted = toggle_mute(OUTPUT_MUTE)
         self.notify(self.perceived_volume, muted)
 
     def notify(self, volume, muted):
@@ -164,6 +165,10 @@ if __name__ == '__main__':
 
     # make sure alsacontrols asoundrc is included so that the mixer exists
     setup_asoundrc()
+
+    # discover mixers
+    play_silence()
+    record_to_nowhere()
 
     session_bus = dbus.SessionBus(mainloop=DBusGMainLoop())
     name = dbus.service.BusName('com.alsacontrol.Volume', session_bus)

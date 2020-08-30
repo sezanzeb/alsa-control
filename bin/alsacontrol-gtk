@@ -31,14 +31,15 @@ gi.require_version('Gtk', '3.0')
 gi.require_version('GLib', '2.0')
 from gi.repository import Gtk, GLib
 
-from alsacontrol.alsa import get_volume, set_volume, toggle_mute, is_muted, \
+from alsacontrol.alsa import get_volume, set_volume, set_mute, is_muted, \
     get_cards, OUTPUT_MUTE, INPUT_MUTE, get_level
 from alsacontrol.bindings import Bindings, get_volume_string, \
     get_volume_icon, get_error_advice, select_input_pcm, select_output_pcm, \
-    get_current_output, eavesdrop_volume_notifications
+    get_current_card, eavesdrop_volume_notifications
 from alsacontrol.data import get_data_path
 from alsacontrol.asoundrc import setup_asoundrc
 from alsacontrol.logger import logger
+from alsacontrol.dbus import set_bus
 
 
 class HandlerDisabled:
@@ -67,27 +68,119 @@ class HandlerDisabled:
             )
 
 
+class InputRow:
+    """A single selectable input card with monitoring."""
+    def __init__(self, card, select_callback):
+        """Construct a row and add it to the list in the GUI."""
+        self.card = card
+        self.select_button = None
+        self.input_level_monitor = None
+        self.box = None
+        self.vailid = True
+        self.select_callback = select_callback
+        self.select_handler_id = None
+        self.put_together()
+
+    def is_valid(self):
+        """Check if this input works."""
+        return self.input_level_monitor.valid
+
+    def get_widget(self):
+        """Return the widget that wraps all the widgets of the row."""
+        return self.box
+
+    def put_together(self):
+        """Create all GTK widgets and the level monitor"""
+        card = self.card
+        level_bar = Gtk.ProgressBar()
+        level_bar.set_valign(Gtk.Align.CENTER)
+
+        input_level_monitor = InputLevel(card, level_bar, self)
+        self.input_level_monitor = input_level_monitor
+        if card != 'jack' and not input_level_monitor.valid:
+            level_bar.destroy()
+            return
+        # jack might not be running. Display it anyway
+
+
+        select_button = Gtk.ToggleButton()
+        select_icon = Gtk.Image.new_from_icon_name(
+            'object-select', Gtk.IconSize.BUTTON
+        )
+        select_button.set_image(select_icon)
+        self.select_handler_id = select_button.connect(
+            'clicked',
+            lambda _: self.select_callback(card)
+        )
+        self.select_button = select_button
+
+        pcm_name = Gtk.Label(label=card)
+        pcm_name.set_xalign(0.0)
+
+        box = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=10
+        )
+        box.pack_start(select_button, expand=False, fill=True, padding=0)
+        box.pack_start(pcm_name, expand=True, fill=True, padding=0)
+        box.pack_start(level_bar, expand=False, fill=False, padding=0)
+        box.set_margin_start(10)
+        box.set_margin_end(22)
+        box.show_all()
+        self.box = box
+
+    def stop_monitor(self):
+        """Stop monitoring the input."""
+        self.input_level_monitor.stop()
+
+    def destroy(self):
+        """Stop monitoring and destroy the row."""
+        self.input_level_monitor.stop()
+        self.box.destroy()
+
+    def set_active(self, active):
+        """Set if the button should be highlighted. Doesn't emit events."""
+        if self.select_button.get_active() != active:
+            self.select_button.handler_block(self.select_handler_id)
+            self.select_button.set_active(active)
+            self.select_button.handler_unblock(self.select_handler_id)
+
+
 class InputLevel:
     """Shows smooth indicators for the input level."""
     def __init__(self, card, level_bar, window):
         """Get the input level and show it in the row of the card."""
+        self.level_bar = level_bar
+        self.window = window
         self.previous_level = 0
-        if card != 'jack':
+        self.card = card
+
+        self.valid = True
+        self.stopped = False
+        self.pcm = None
+
+        self.start_monitoring()
+
+    def start_monitoring(self):
+        card = self.card
+        if card == 'jack':
+            card = 'alsacontrol-jack-input'
+        else:
             card = f'sysdefault:CARD={card}'
+
         try:
             pcm = alsaaudio.PCM(
                 type=alsaaudio.PCM_CAPTURE,
-                device=card
+                device=card,
+                # don't freeze when the device disappears
+                mode=alsaaudio.PCM_NONBLOCK
             )
         except alsaaudio.ALSAAudioError:
             logger.error(f'Could not monitor the level of "{card}"')
+            self.valid = False
             return
 
         self.pcm = pcm
-        self.card = card
-        self.level_bar = level_bar
-        self.stopped = False
-        self.window = window
         GLib.timeout_add(1000 / 60, self.loop)
 
     def stop(self):
@@ -96,11 +189,19 @@ class InputLevel:
     def loop(self):
         if self.stopped:
             return False
-        new_level = get_level(self.pcm) ** (1 / 2)
+
+        new_level = get_level(self.pcm)
+        if new_level is None:
+            # try again
+            return True
+        # make silent signals more apparent
+        new_level = new_level ** (1 / 2)
+
         # exponential smoothing
         new_level = (self.previous_level * 10 + new_level) / 11
         self.previous_level = new_level
         self.level_bar.set_fraction(new_level)
+        # Keep the UI responsive
         Gtk.main_iteration()
         return True
 
@@ -111,7 +212,7 @@ class ALSAControlWindow:
         self.bindings = Bindings()
 
         self.input_levels = []
-        self.input_cards = []
+        self.input_rows = []
 
         gladefile = os.path.join(get_data_path(), 'alsacontrol.glade')
         builder = Gtk.Builder()
@@ -127,6 +228,7 @@ class ALSAControlWindow:
         self.populate_output_cards_dropdown()
         self.populate_input_pcms()
         self.select_current_output()
+        self.select_current_input()
 
         self.speaker_test_process = None
 
@@ -139,12 +241,24 @@ class ALSAControlWindow:
 
         eavesdrop_volume_notifications(
             DBusGMainLoop(),
-            self.initialize_volume_slider
+            self.volume_changed_externally
         )
 
         GLib.timeout_add(500, self.refresh_cards)
 
     """General Stuff"""
+
+    def volume_changed_externally(self):
+        """When the volume was changed by `alsacontrol`."""
+        self.initialize_volume_slider()
+
+        output_volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True)
+        output_muted = is_muted(OUTPUT_MUTE)
+        self.refresh_icon_state('output', output_volume, output_muted)
+
+        input_volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True)
+        input_muted = is_muted(INPUT_MUTE)
+        self.refresh_icon_state('input', input_volume, input_muted)
 
     def on_close(self, *_):
         """Safely close the application."""
@@ -164,14 +278,12 @@ class ALSAControlWindow:
         output_slider = self.builder.get_object('output_volume_slider_scale')
         output_volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True)
         output_slider.set_value(output_volume)
-        output_volume = output_slider.get_value()
         output_muted = is_muted(OUTPUT_MUTE)
         self.refresh_icon_state('output', output_volume, output_muted)
 
         input_slider = self.builder.get_object('input_volume_slider_scale')
         input_volume = get_volume(alsaaudio.PCM_CAPTURE, nonlinear=True)
         input_slider.set_value(input_volume)
-        input_volume = input_slider.get_value()
         input_muted = is_muted(INPUT_MUTE)
         self.refresh_icon_state('input', input_volume, input_muted)
 
@@ -208,6 +320,9 @@ class ALSAControlWindow:
         volume_label = self.builder.get_object(f'{tab}_volume_current')
         volume_label.set_label(volume_string)
 
+        mute_icon = self.builder.get_object(f'mute_{tab}')
+        mute_icon.set_active(muted)
+
         volume_icon_name = get_volume_icon(volume, muted)
         volume_image = self.builder.get_object(f'{tab}_volume_icon')
         volume_image.set_from_icon_name(volume_icon_name, Gtk.IconSize.BUTTON)
@@ -223,7 +338,7 @@ class ALSAControlWindow:
     def select_current_output(self):
         """Select the configured values for both dropdowns."""
         with self.dropdown_handlers_disabled():
-            d, card = get_current_output()
+            d, card = get_current_card('pcm_output')
             if card is not None:
                 card_selection = self.card_selection
                 if card_selection.get_active() != d:
@@ -232,12 +347,12 @@ class ALSAControlWindow:
     def populate_output_cards_dropdown(self):
         """Get all output options and fill them into the dropdowns."""
         with self.dropdown_handlers_disabled():
-            cards = get_cards(alsaaudio.PCM_PLAYBACK)
+            cards = get_cards()
             self.card_selection.remove_all()
             for card in cards:
                 self.card_selection.append(card, card)
             # since all cards have been removed, restore the selection
-            index, card = get_current_output()
+            index, card = get_current_card('pcm_output')
             if card is not None:
                 self.card_selection.set_active(index)
 
@@ -246,7 +361,7 @@ class ALSAControlWindow:
         card_name = card_dropdown.get_active_text()
         if card_name is None:
             return
-        if get_current_output()[1] == card_name:
+        if get_current_card('pcm_output')[1] == card_name:
             # already at the correct selection
             return
         select_output_pcm(card_name)
@@ -258,9 +373,10 @@ class ALSAControlWindow:
         self.refresh_icon_state('output', volume, muted)
         set_volume(volume, alsaaudio.PCM_PLAYBACK, nonlinear=True)
 
-    def on_mute_output_clicked(self, _):
+    def on_mute_output_clicked(self, button):
         """Handler for when the mute button was clicked."""
-        muted = toggle_mute()
+        muted = button.get_active()
+        set_mute(OUTPUT_MUTE, muted)
         volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True)
         self.refresh_icon_state('output', volume, muted)
 
@@ -308,50 +424,25 @@ class ALSAControlWindow:
         """Create the list of intput cards."""
         self.stop_input_levels()
 
-        for input_card in self.input_cards:
+        for input_card in self.input_rows:
             input_card.destroy()
-        self.input_cards = []
+        self.input_rows = []
 
         input_cards_list = self.builder.get_object('input_cards_list')
 
-        cards = get_cards(alsaaudio.PCM_CAPTURE)
+        cards = get_cards()
         for card in cards:
-            level_bar = Gtk.ProgressBar()
-            level_bar.set_valign(Gtk.Align.CENTER)
-
-            self.input_levels.append(InputLevel(card, level_bar, self))
-
-            select_button = Gtk.Button.new_from_icon_name(
-                'object-select',
-                Gtk.IconSize.BUTTON
-            )
-
-            def on_click(_, card_name=card):
-                # copy card into card_name when the function is created,
-                # otherwise it will always be the last device in cards
-                self.select_input_card(card_name)
-
-            select_button.connect('clicked', on_click)
-
-            pcm_name = Gtk.Label(label=card)
-            pcm_name.set_xalign(0.0)
-
-            box = Gtk.Box(
-                orientation=Gtk.Orientation.HORIZONTAL,
-                spacing=10
-            )
-            box.pack_start(select_button, expand=False, fill=True, padding=0)
-            box.pack_start(pcm_name, expand=True, fill=True, padding=0)
-            box.pack_start(level_bar, expand=False, fill=False, padding=0)
-            box.set_margin_start(10)
-            box.set_margin_end(22)
-            box.show_all()
-
-            self.input_cards.append(box)
-
-            input_cards_list.pack_start(
-                box, expand=False, fill=False, padding=10
-            )
+            # for each possible output, construct an InputRow, which also
+            # figures out if the card is usable as input.
+            input_row = InputRow(card, self.select_input_card)
+            if input_row.is_valid():
+                # If it can be used, register it so that it
+                # can be manipulated
+                input_cards_list.pack_start(
+                    input_row.get_widget(),
+                    expand=False, fill=False, padding=10
+                )
+                self.input_rows.append(input_row)
 
         input_cards_scrolled_window = self.builder.get_object(
             'input_cards_scrolled_window'
@@ -367,6 +458,13 @@ class ALSAControlWindow:
         """Select a card as input source."""
         label = self.builder.get_object('input_card_name')
         label.set_label(card)
+        for input_row in self.input_rows:
+            if input_row.card != card:
+                print('set', input_row.card, 'inactive')
+                input_row.set_active(0)
+            else:
+                input_row.set_active(1)
+
         select_input_pcm(card)
 
     def on_input_volume_change(self, gtk_range):
@@ -376,19 +474,28 @@ class ALSAControlWindow:
         self.refresh_icon_state('input', volume, muted)
         set_volume(volume, alsaaudio.PCM_CAPTURE, nonlinear=True)
 
-    def on_mute_input_clicked(self, _):
+    def on_mute_input_clicked(self, button):
         """Handler for when the mute button was clicked."""
-        muted = toggle_mute(INPUT_MUTE)
+        muted = button.get_active()
+        set_mute(INPUT_MUTE, muted)
         volume = get_volume(alsaaudio.PCM_CAPTURE, nonlinear=True)
         self.refresh_icon_state('input', volume, muted)
 
     def stop_input_levels(self):
+        """Stop all loops that monitor input levels."""
         for input_level in self.input_levels:
             input_level.stop()
         self.input_levels = []
 
+    def select_current_input(self):
+        """Select the configured input."""
+        card = get_current_card('pcm_input')[1]
+        if card is not None:
+            self.select_input_card(card)
+
 
 if __name__ == '__main__':
+    set_bus(DBusGMainLoop())
     setup_asoundrc()
     ALSAControlWindow()
     Gtk.main()
