@@ -23,7 +23,7 @@ alsacontrol-gtk
     <img src="data/input-devices.png"/>
 </p>
 
-Start the daemon. You can put this into your autostart.
+Start the daemon, which is required to change the volume. You can put this into your autostart.
 
 ```
 alsacontrol-daemon-gtk
