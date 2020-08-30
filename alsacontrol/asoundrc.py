@@ -33,8 +33,6 @@ alsactl_asoundrc = os.path.expanduser('~/.config/alsacontrol/asoundrc')
 
 def setup_asoundrc():
     """Sets up the .asoundrc include and files in home."""
-    # first make a backup using
-    os.system('cp ~/.asoundrc ~/.config/alsacontrol/.asoundrc.backup')
     check_asoundrc()
     create_asoundrc()
     add_include()
