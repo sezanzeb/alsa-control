@@ -28,7 +28,6 @@ alsacontrol-gtk
     <img src="data/input-devices.png" width="40%"/>
 </p>
 
-
 **Starting the daemon**
 
 Start the daemon. You can put this into your autostart.
@@ -50,14 +49,6 @@ alsacontrol -m
 </p>
 
 
-## Testing
-
-```
-pylint alsacontrol --extension-pkg-whitelist=alsaaudio
-sudo python3 setup.py install && python3 tests/test.py
-```
-
-
 ## Features
 
 Basically provide everything that is needed to comfortably use ALSA without pulseaudio in a GUI
@@ -73,6 +64,7 @@ Basically provide everything that is needed to comfortably use ALSA without puls
 - [x] Add a dropdown to change output pcm devices
 - [x] Jack support (first start jack, then the GUI to select it)
 - [x] Add a list of input devices and show their input level
+- [ ] Start the daemon on login
 - [ ] Provide .deb files and get it into the AUR
 
 ## Jack
@@ -81,3 +73,10 @@ Changing jacks volume via softvol doesn't feel responsive. Firefox seems to pref
 talking to jack directly over using the default device provided by the generated asoundrc, so the
 volume change doesn't affect it. Before starting jack, the ALSA-Control GUI needs to be closed because
 jack can't acquire the input device as long as the level is monitored.
+
+## Testing
+
+```
+pylint alsacontrol --extension-pkg-whitelist=alsaaudio
+sudo python3 setup.py install && python3 tests/test.py
+```
