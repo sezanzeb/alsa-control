@@ -106,7 +106,7 @@ def get_default_card(pcm_type):
     pcm_type : int
         one of alsaaudio.PCM_CAPTURE or alsaaudio.PCM_PLAYBACK
     """
-    pcms = alsaaudio.pcms(pcmtype=pcm_type)
+    pcms = alsaaudio.pcms(pcm_type)
     for pcm in pcms:
         if 'Generic' in pcm:
             return pcm
