@@ -40,6 +40,7 @@ from alsacontrol.data import get_data_path
 from alsacontrol.asoundrc import setup_asoundrc
 from alsacontrol.logger import logger
 from alsacontrol.dbus import set_bus
+from alsacontrol.pulse import is_pulse_running
 
 
 class HandlerDisabled:
@@ -241,6 +242,14 @@ class ALSAControlWindow:
 
         eavesdrop_volume_notifications(self.volume_changed_externally)
 
+        if is_pulse_running():
+            logger.error('Pulseaudio is running')
+            builder.get_object('status_bar_text').set_text(
+                'This app should not be used together with Pulseaudio.\n'
+                'Consider using pavucontrol instead.'
+            )
+            builder.get_object('status_bar').show()
+
         GLib.timeout_add(500, self.refresh_cards)
 
     """General Stuff"""
@@ -294,7 +303,7 @@ class ALSAControlWindow:
         else:
             # shrink the output tab height to the contents
             input_cards_scrolled_window.hide()
-            self.shrink_height()
+            # self.shrink_height()
 
     def shrink_height(self):
         """Reduce the windows height as much as possible."""
@@ -405,7 +414,7 @@ class ALSAControlWindow:
             else:
                 speaker_test_error_text.set_label(error)
         else:
-            self.shrink_height()
+            # self.shrink_height()
             speaker_test_error.hide()
 
         if state:
@@ -441,15 +450,15 @@ class ALSAControlWindow:
                 )
                 self.input_rows.append(input_row)
 
-        input_cards_scrolled_window = self.builder.get_object(
+        """input_cards_scrolled_window = self.builder.get_object(
             'input_cards_scrolled_window'
         )
-        # set the minimum content height of the ScrolledWindow to the
-        # heigt of the list, but at most 300px
-        height = min(input_cards_list.get_preferred_height()[0], 400)
+        # set the height to the height of the contents or at most 200px.
+        # It can still be dragged larger.
+        height = min(input_cards_list.get_preferred_height()[0], 200)
         input_cards_scrolled_window.set_min_content_height(height)
 
-        self.shrink_height()
+        self.shrink_height()"""
 
     def select_input_card(self, card):
         """Select a card as input source."""
@@ -457,7 +466,6 @@ class ALSAControlWindow:
         label.set_label(card)
         for input_row in self.input_rows:
             if input_row.card != card:
-                print('set', input_row.card, 'inactive')
                 input_row.set_active(0)
             else:
                 input_row.set_active(1)

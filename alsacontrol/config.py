@@ -102,8 +102,9 @@ class Config:
 
     def set(self, key, value):
         """Write a setting into memory and ~/.config/alsacontrol/config."""
-        if key in value and self._config[key] == value:
+        if key in self._config and self._config[key] == value:
             logger.debug('Setting "%s" is already "%s"', key, value)
+            return False
         else:
             self._config[key] = value
 
@@ -116,6 +117,7 @@ class Config:
                 if not config_contents.endswith('\n'):
                     config_contents += '\n'
                 config_file.write(config_contents)
+            return True
 
 
 def get_config():
