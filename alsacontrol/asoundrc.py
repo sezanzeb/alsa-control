@@ -40,10 +40,14 @@ def setup_asoundrc():
 
 def add_include():
     """Adds the include line for this to ~/.asoundrc."""
-    with open(os.path.expanduser('~/.asoundrc'), 'r') as file:
-        contents = file.read()
+    dot_asoundrc_path = os.path.expanduser('~/.asoundrc')
+    if os.path.exists(dot_asoundrc_path):
+        with open(dot_asoundrc_path, 'r') as file:
+            contents = file.read()
+    else:
+        contents = ''
 
-    with open(os.path.expanduser('~/.asoundrc'), 'a') as file:
+    with open(dot_asoundrc_path, 'a') as file:
         include = f'<{alsactl_asoundrc}>'
         if include not in contents:
             file.write(include)
@@ -52,7 +56,12 @@ def add_include():
 def check_asoundrc():
     """If conflicting configurations exist in .asoundrc, throw a warning."""
     # check if they change the default card
-    with open(os.path.expanduser('~/.asoundrc'), 'r') as file:
+    dot_asoundrc_path = os.path.expanduser('~/.asoundrc')
+
+    if not os.path.exists(dot_asoundrc_path):
+        return
+
+    with open(dot_asoundrc_path, 'r') as file:
         for line in file:
             # get all uncommented lines
             if not line.strip().startswith('#'):
