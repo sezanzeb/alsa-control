@@ -73,3 +73,8 @@ Basically provide everything that is needed to comfortably use ALSA without puls
 - [x] Add a list of input devices and show their input level
 - [ ] Provide .deb files and get it into the AUR
 
+## Downsides
+
+Changing the volume via softvol is sometimes slow and doesn't feel responsive. Firefox seems to prefer
+talking to jack directly over using the default device provided by the generated asoundrc, so the
+volume change doesn't affect it.
