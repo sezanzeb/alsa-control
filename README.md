@@ -1,8 +1,7 @@
 # ALSA Control
 
 Since ALSA provides dmix for soundcards that don't support multiplexing and softvol for those that can't control their volume,
-it is not necessary to run pulseaudio for that. You can use this tool to select our input and output devices and automatically
-configure dmix and softvol for you.
+it is not necessary to run pulseaudio for that. This app is intended to replace pavucontrol in that case.
 
 ## Usage
 
