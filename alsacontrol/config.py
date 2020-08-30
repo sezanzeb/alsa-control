@@ -75,6 +75,7 @@ class Config:
         # create an empty config if it doesn't exist
         if not os.path.exists(self._path):
             logger.info('Creating config file "%s"', self._path)
+            os.makedirs(os.path.dirname(self._path))
             os.mknod(self._path)
             # add all default values. Don't guess those values during
             # operation to avoid suddenly changing the output card.
