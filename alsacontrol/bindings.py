@@ -93,7 +93,8 @@ def select_output_pcm(card):
     # figure out if this is an actual hardware device or not
     cards = alsaaudio.cards()
     if card in cards:
-        pcm_name = f'hw:CARD={card}'
+        plugin = get_config().get('output_plugin', 'hw')
+        pcm_name = f'{plugin}:CARD={card}'
     else:
         pcm_name = card  # otherwise probably jack
     get_config().set('pcm_output', pcm_name)
@@ -111,7 +112,8 @@ def select_input_pcm(card):
     # figure out if this is an actual hardware device or not
     cards = alsaaudio.cards()
     if card in cards:
-        pcm_name = f'sysdefault:CARD={card}'
+        plugin = get_config().get('input_plugin', 'sysdefault')
+        pcm_name = f'{plugin}:CARD={card}'
     else:
         pcm_name = card  # otherwise probably jack
     get_config().set('pcm_input', pcm_name)

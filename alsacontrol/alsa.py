@@ -63,7 +63,7 @@ def play_silence():
     Otherwise 'Unable to find mixer control alsacontrol-output-mute'
     will be thrown at the start.
     """
-    logger.debug('Trying to play sound to make the mixers visible')
+    logger.debug('Trying to play sound to make the output mixers visible')
     try:
         pcm = alsaaudio.PCM(
             type=alsaaudio.PCM_PLAYBACK,
@@ -86,7 +86,7 @@ def record_to_nowhere():
     Otherwise 'Unable to find mixer control alsacontrol-input-mute'
     will be thrown at the start.
     """
-    logger.debug('Trying to capture sound to make the mixers visible')
+    logger.debug('Trying to capture sound to make the input mixers visible')
     try:
         pcm = alsaaudio.PCM(
             type=alsaaudio.PCM_CAPTURE,
@@ -108,14 +108,20 @@ def get_default_card(pcm_type):
     pcm_type : int
         one of alsaaudio.PCM_CAPTURE or alsaaudio.PCM_PLAYBACK
     """
-    pcms = alsaaudio.pcms(pcm_type)
+    pcms = [pcm for pcm in alsaaudio.pcms(pcm_type) if ':CARD=' in pcm]
+    if len(pcms) == 0:
+        logger.error('Could not find any hw type pcm')
+        return 'null'
+    # Check if a hw Generic exists
     for pcm in pcms:
         if 'Generic' in pcm:
-            return pcm
-        if 'CARD=' in pcm:
-            return pcm
-    logger.error('Could not find a default card')
-    return None
+            return f'hw:CARD={get_card(pcm)}'
+    # Check if something else than HDMI exists
+    for pcm in pcms:
+        if 'HDMI' not in pcm:
+            return f'hw:CARD={get_card(pcm)}'
+    # Use anything
+    return f'hw:CARD={get_card(pcms[0])}'
 
 
 def get_card(pcm):

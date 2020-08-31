@@ -35,7 +35,8 @@ gi.require_version('GLib', '2.0')
 from gi.repository import Notify, GLib
 
 from alsacontrol.asoundrc import setup_asoundrc
-from alsacontrol.logger import logger, update_verbosity, log_info
+from alsacontrol.logger import logger, update_verbosity, log_info, \
+    add_filehandler
 from alsacontrol.alsa import set_volume, get_volume, toggle_mute, \
     is_muted, to_perceived_volume, to_mixer_volume, play_silence, \
     record_to_nowhere, OUTPUT_MUTE
@@ -159,6 +160,7 @@ if __name__ == '__main__':
         default=False
     )
     options = parser.parse_args(sys.argv[1:])
+    add_filehandler()
     update_verbosity(options.debug)
 
     log_info()

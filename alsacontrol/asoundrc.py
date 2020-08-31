@@ -82,8 +82,7 @@ def check_asoundrc():
                     )
 
 
-def create_asoundrc():
-    """Create and populate ~/.config/alsacontrol/asoundrc."""
+def get_pcms():
     pcm_input = get_config().get('pcm_input', 'null')
     pcm_output = get_config().get('pcm_output', 'null')
     if pcm_input == 'null':
@@ -94,21 +93,81 @@ def create_asoundrc():
         logger.warning('No output specified')
     else:
         logger.info('Using output %s', pcm_output)
+    return pcm_input, pcm_output
 
-    if 'CARD=' not in pcm_output:
-        # software output, for example jack
-        output_pcm_softvol = 'alsacontrol-plug'
-    else:
+
+def should_use_dmix(pcm_output):
+    # use dmix only for hardware devices,
+    # if the config is on and if the plugin is hw
+    hardware_device = 'CARD=' in pcm_output
+    output_use_dmix = get_config().get('output_use_dmix', True)
+    output_plugin_hw = pcm_output.startswith('hw:')
+    return hardware_device and output_use_dmix and output_plugin_hw
+
+
+def should_use_dsnoop(pcm_input):
+    hardware_device = 'CARD=' in pcm_input
+    input_use_dmix = get_config().get('input_use_dsnoop', True)
+    input_plugin_hw = pcm_input.startswith('hw:')
+    return hardware_device and input_use_dmix and input_plugin_hw
+
+
+def create_asoundrc():
+    """Create and populate ~/.config/alsacontrol/asoundrc."""
+    pcm_input, pcm_output = get_pcms()
+
+    # connect the various plugins
+
+    output_use_softvol = get_config().get('output_use_softvol', True)
+    use_dmix = should_use_dmix(pcm_output)
+    # dmix has to be the last step,
+    # so its output is always pcm_output
+    if use_dmix and output_use_softvol:
+        # default -> asym -> softvol -> dmix -> output
+        output_pcm_asym = 'alsacontrol-output-softvol'
         output_pcm_softvol = 'alsacontrol-dmix'
+    elif use_dmix and not output_use_softvol:
+        # default -> asym -> dmix -> output
+        output_pcm_asym = 'alsacontrol-dmix'
+        output_pcm_softvol = 'null'
+    elif not use_dmix and output_use_softvol:
+        # default -> asym-> softvol -> output
+        output_pcm_asym = 'alsacontrol-output-softvol'
+        output_pcm_softvol = pcm_output
+    elif not use_dmix and not output_use_softvol:
+        # default -> asym-> output
+        output_pcm_asym = pcm_output
+        output_pcm_softvol = 'null'
+
+    input_use_softvol = get_config().get('input_use_softvol', True)
+    use_dsnoop = should_use_dsnoop(pcm_input)
+    # dsnoop has to be the last step,
+    # so its output is always pcm_input
+    if use_dsnoop and input_use_softvol:
+        # default -> asym -> softvol -> dmix -> output
+        input_pcm_asym = 'alsacontrol-input-softvol'
+        input_pcm_softvol = 'alsacontrol-dsnoop'
+    elif use_dsnoop and not input_use_softvol:
+        # default -> asym -> dmix -> output
+        input_pcm_asym = 'alsacontrol-dsnoop'
+        input_pcm_softvol = 'null'
+    elif not use_dsnoop and output_use_softvol:
+        # default -> asym-> softvol -> output
+        input_pcm_asym = 'alsacontrol-input-softvol'
+        input_pcm_softvol = pcm_output
+    elif not use_dsnoop and not input_use_softvol:
+        # default -> asym-> output
+        input_pcm_asym = pcm_output
+        input_pcm_softvol = 'null'
 
     asoundrc_config = {
-        'output_pcm_asym': 'alsacontrol-output-softvol',
+        'output_pcm_asym': output_pcm_asym,
         'output_pcm_softvol': output_pcm_softvol,
         'output_pcm': pcm_output,
         'output_channels': get_config().get('output_channels', 2),
 
-        'input_pcm_asym': 'alsacontrol-input-softvol',
-        'input_pcm_softvol': pcm_input,
+        'input_pcm_asym': input_pcm_asym,
+        'input_pcm_softvol': input_pcm_softvol,
         'input_pcm': pcm_input,
     }
 

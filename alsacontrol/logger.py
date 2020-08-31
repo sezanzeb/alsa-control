@@ -22,6 +22,7 @@
 """Logging setup for ALSA-Control."""
 
 
+import os
 import logging
 import pkg_resources
 
@@ -76,3 +77,21 @@ def update_verbosity(debug):
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
+
+
+def add_filehandler():
+    """Clear the existing logfile and start logging to it."""
+    # jack also logs to ~/.log
+    log_path = os.path.expanduser('~/.log/alsacontrol')
+    log_file = os.path.join(log_path, 'log')
+
+    if not os.path.exists(log_path):
+        os.makedirs(log_path)
+
+    if os.path.exists(log_file):
+        # keep the log path small, start from scratch each time
+        os.remove(log_file)
+
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setFormatter(Formatter())
+    logger.addHandler(file_handler)

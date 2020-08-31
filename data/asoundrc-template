@@ -28,7 +28,7 @@ pcm.alsacontrol-dmix {{
     }}
 }}
 
-# used for jack
+# used for jack level monitoring
 # This could also be used for sysdefault pcms, but that doesn't seem
 # to support more channels than 2, hence dmix above is used.
 pcm.alsacontrol-plug {{
