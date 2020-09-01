@@ -19,16 +19,12 @@
 # along with ALSA-Control.  If not, see <https://www.gnu.org/licenses/>.
 
 
-"""To check if pulseaudio is running."""
+"""Error classes."""
 
 
-import os
+class MixerNotFoundError(Exception):
+    """Raised when the mixer doesn't exist"""
 
 
-def is_pulse_running():
-    """Test if pulseaudio is running.
-
-    If it does, then things might not work as expected.
-    """
-    return_code = os.system('pulseaudio --check')
-    return return_code == 0
+class CardNotFound(Exception):
+    """Raised when the specified card doesn't exist"""

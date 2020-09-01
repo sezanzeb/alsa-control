@@ -26,7 +26,10 @@ import os
 import alsaaudio
 
 from alsacontrol.logger import logger
-from alsacontrol.alsa import get_default_card
+from alsacontrol.alsa import get_default_card, get_card
+
+
+_config = None
 
 
 def _modify_config(config_contents, key, value):
@@ -64,7 +67,32 @@ def _modify_config(config_contents, key, value):
     return '\n'.join(split)
 
 
-_config = None
+def input_exists():
+    """Check if the configured input card and mixer  is available."""
+    # might be a pcm name with plugin and device
+    card = get_card(get_config().get('pcm_input', None))
+    if not card in alsaaudio.cards():
+        logger.error('Could not find the input card')
+        return False
+    if get_config().get('input_use_softvol', True):
+        if 'alsacontrol-input-volume' not in alsaaudio.mixers():
+            logger.error('Could not find the input softvol mixer')
+            return False
+    return True
+
+
+def output_exists():
+    """Check if the configured output card and mixer is available."""
+    # might be a pcm name with plugin and device
+    card = get_card(get_config().get('pcm_output', None))
+    if not card in alsaaudio.cards():
+        logger.error('Could not find the output card')
+        return False
+    if get_config().get('output_use_softvol', True):
+        if 'alsacontrol-output-volume' not in alsaaudio.mixers():
+            logger.error('Could not find the output softvol mixer')
+            return False
+    return True
 
 
 class Config:
@@ -88,6 +116,11 @@ class Config:
             self.set('output_use_softvol', True)
             self.set('output_use_dmix', True)
 
+        self.load_config()
+
+    def load_config(self):
+        """Read the config file."""
+        self._config = {}
         # load config
         with open(self._path, 'r') as config_file:
             for line in config_file:

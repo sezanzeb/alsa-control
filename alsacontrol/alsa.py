@@ -73,7 +73,13 @@ def play_silence():
         )
         data = b'\x00' * 32
         pcm.write(data)
-    except alsaaudio.ALSAAudioError:
+    except alsaaudio.ALSAAudioError as e:
+        error = str(e)
+        logger.error(error)
+        if 'resource busy' in error:
+            logger.error(
+                'Your specified output is currently busy, is jack using it?'
+            )
         logger.error(
             'Could not initialize output mixer, '
             'try setting a different device.'
@@ -93,7 +99,14 @@ def record_to_nowhere():
             device='default'
         )
         pcm.read()
-    except alsaaudio.ALSAAudioError:
+    except alsaaudio.ALSAAudioError as e:
+        error = str(e)
+        logger.error(error)
+        if 'resource busy' in error:
+            logger.error(
+                'Your specified input is currently busy, are jack or pulse'
+                'using it?'
+            )
         logger.error(
             'Could not initialize input mixer. '
             'Try setting a different device.'
@@ -203,8 +216,6 @@ def set_volume(volume, pcm_type, nonlinear=False):
 def get_volume(pcm, nonlinear=False):
     """Get the current mixer volume between 0 and 1.
 
-    If it fails, it will return None.
-
     Parameters
     ----------
     pcm : int
@@ -221,7 +232,7 @@ def get_volume(pcm, nonlinear=False):
 
     if mixer_name not in alsaaudio.mixers():
         logger.error('Could not find mixer %s', mixer_name)
-        return None
+        raise ValueError(f'Could not find mixer {mixer_name}')
 
     mixer = alsaaudio.Mixer(mixer_name)
     mixer_volume = mixer.getvolume(pcm)[0] / 100
@@ -266,3 +277,9 @@ def is_muted(mixer_name=OUTPUT_MUTE):
 
     mixer = alsaaudio.Mixer(mixer_name)
     return mixer.getmute()[0] == 1
+
+
+def card_exists(card):
+    """Check if the card is available."""
+    # might be a pcm name with plugin and device
+    return get_card(card) in alsaaudio.cards()

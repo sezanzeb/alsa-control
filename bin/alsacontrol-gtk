@@ -35,12 +35,13 @@ from alsacontrol.alsa import get_volume, set_volume, set_mute, is_muted, \
     get_cards, OUTPUT_MUTE, INPUT_MUTE, get_level
 from alsacontrol.bindings import Bindings, get_volume_string, \
     get_volume_icon, get_error_advice, select_input_pcm, select_output_pcm, \
-    get_current_card, eavesdrop_volume_notifications
+    get_current_card, eavesdrop_volume_notifications, play_silence, \
+    record_to_nowhere, only_with_existing_input, only_with_existing_output
 from alsacontrol.data import get_data_path
-from alsacontrol.asoundrc import setup_asoundrc
 from alsacontrol.logger import logger
 from alsacontrol.dbus import set_bus
 from alsacontrol.pulse import is_pulse_running
+from alsacontrol.config import output_exists, input_exists
 
 
 class HandlerDisabled:
@@ -73,7 +74,7 @@ class InputRow:
     """A single selectable input card with monitoring."""
     def __init__(self, card, select_callback):
         """Construct a row and add it to the list in the GUI."""
-        self.card = card
+        self.card = card  # card that this row represents
         self.select_button = None
         self.input_level_monitor = None
         self.box = None
@@ -98,11 +99,9 @@ class InputRow:
 
         input_level_monitor = InputLevel(card, level_bar, self)
         self.input_level_monitor = input_level_monitor
-        if card != 'jack' and not input_level_monitor.valid:
+        if not input_level_monitor.valid:
             level_bar.destroy()
             return
-        # jack might not be running. Display it anyway
-
 
         select_button = Gtk.ToggleButton()
         select_icon = Gtk.Image.new_from_icon_name(
@@ -245,7 +244,7 @@ class ALSAControlWindow:
         if is_pulse_running():
             logger.error('Pulseaudio is running')
             builder.get_object('status_bar_text').set_text(
-                'This app should not be used together with Pulseaudio.\n'
+                'This app may not work correctly with Pulseaudio.\n'
                 'Consider using pavucontrol instead.'
             )
             builder.get_object('status_bar').show()
@@ -254,6 +253,8 @@ class ALSAControlWindow:
 
     """General Stuff"""
 
+    @only_with_existing_output
+    @only_with_existing_input
     def volume_changed_externally(self):
         """When the volume was changed by `alsacontrol`."""
         self.initialize_volume_slider()
@@ -279,16 +280,18 @@ class ALSAControlWindow:
             self.populate_input_pcms()
         return True
 
+    @only_with_existing_output
+    @only_with_existing_input
     def initialize_volume_slider(self):
         """Reflect the current volume and mute state on each tab."""
         output_slider = self.builder.get_object('output_volume_slider_scale')
-        output_volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True)
+        output_volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True) or 0
         output_slider.set_value(output_volume)
         output_muted = is_muted(OUTPUT_MUTE)
         self.refresh_icon_state('output', output_volume, output_muted)
 
         input_slider = self.builder.get_object('input_volume_slider_scale')
-        input_volume = get_volume(alsaaudio.PCM_CAPTURE, nonlinear=True)
+        input_volume = get_volume(alsaaudio.PCM_CAPTURE, nonlinear=True) or 0
         input_slider.set_value(input_volume)
         input_muted = is_muted(INPUT_MUTE)
         self.refresh_icon_state('input', input_volume, input_muted)
@@ -364,6 +367,9 @@ class ALSAControlWindow:
 
     def on_output_card_selected(self, card_dropdown):
         """Handler for when a card is selected or the list just changed."""
+        if not output_exists():
+            play_silence()
+
         card_name = card_dropdown.get_active_text()
         if card_name is None:
             return
@@ -372,6 +378,7 @@ class ALSAControlWindow:
             return
         select_output_pcm(card_name)
 
+    @only_with_existing_output
     def on_output_volume_change(self, gtk_range):
         """Handler when the output volume slider was dragged."""
         muted = is_muted()
@@ -379,6 +386,7 @@ class ALSAControlWindow:
         self.refresh_icon_state('output', volume, muted)
         set_volume(volume, alsaaudio.PCM_PLAYBACK, nonlinear=True)
 
+    @only_with_existing_output
     def on_mute_output_clicked(self, button):
         """Handler for when the mute button was clicked."""
         muted = button.get_active()
@@ -386,6 +394,7 @@ class ALSAControlWindow:
         volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True)
         self.refresh_icon_state('output', volume, muted)
 
+    @only_with_existing_output
     def on_test_speaker_clicked(self, _):
         """Handler when the speaker test button was pressed."""
         self.bindings.toggle_speaker_test()
@@ -450,18 +459,11 @@ class ALSAControlWindow:
                 )
                 self.input_rows.append(input_row)
 
-        """input_cards_scrolled_window = self.builder.get_object(
-            'input_cards_scrolled_window'
-        )
-        # set the height to the height of the contents or at most 200px.
-        # It can still be dragged larger.
-        height = min(input_cards_list.get_preferred_height()[0], 200)
-        input_cards_scrolled_window.set_min_content_height(height)
-
-        self.shrink_height()"""
-
     def select_input_card(self, card):
         """Select a card as input source."""
+        if not input_exists():
+            record_to_nowhere()
+
         label = self.builder.get_object('input_card_name')
         label.set_label(card)
         for input_row in self.input_rows:
@@ -472,6 +474,7 @@ class ALSAControlWindow:
 
         select_input_pcm(card)
 
+    @only_with_existing_input
     def on_input_volume_change(self, gtk_range):
         """Handler when the input volume slider was dragged."""
         muted = is_muted(INPUT_MUTE)
@@ -479,6 +482,7 @@ class ALSAControlWindow:
         self.refresh_icon_state('input', volume, muted)
         set_volume(volume, alsaaudio.PCM_CAPTURE, nonlinear=True)
 
+    @only_with_existing_input
     def on_mute_input_clicked(self, button):
         """Handler for when the mute button was clicked."""
         muted = button.get_active()
@@ -501,6 +505,5 @@ class ALSAControlWindow:
 
 if __name__ == '__main__':
     set_bus(DBusGMainLoop())
-    setup_asoundrc()
     ALSAControlWindow()
     Gtk.main()

@@ -40,7 +40,10 @@ from alsacontrol.logger import logger, update_verbosity, log_info, \
 from alsacontrol.alsa import set_volume, get_volume, toggle_mute, \
     is_muted, to_perceived_volume, to_mixer_volume, play_silence, \
     record_to_nowhere, OUTPUT_MUTE
-from alsacontrol.bindings import get_volume_icon
+from alsacontrol.bindings import get_volume_icon, get_current_card, \
+    only_with_existing_output
+from alsacontrol.dbus import set_bus
+from alsacontrol.config import get_config, output_exists
 
 
 Notify.init('ALSA-Control')
@@ -61,10 +64,14 @@ class Daemon(service.Object):
         # Especially going down by 10% and up by 10% should end up at the
         # initial volume. alsamixer only provides a resolution of 100
         # and softvol of max 1048
-        self.perceived_volume = get_volume(alsaaudio.PCM_PLAYBACK, True) or 0
+        if output_exists():
+            self.perceived_volume = get_volume(alsaaudio.PCM_PLAYBACK, True)
+        else:
+            self.perceived_volume = 0
 
         super().__init__(*args, **kwargs)
 
+    @only_with_existing_output
     def check_volume_integrity(self):
         """If the internal volume is out of touch with the mixer, reset.
 
@@ -72,8 +79,6 @@ class Daemon(service.Object):
         """
         expected_mixer_volume = to_mixer_volume(self.perceived_volume)
         actual_mixer_volume = get_volume(alsaaudio.PCM_PLAYBACK)
-        if actual_mixer_volume is None:
-            return False
 
         if abs(expected_mixer_volume - actual_mixer_volume) > 0.01:
             logger.debug(
@@ -128,7 +133,9 @@ class Daemon(service.Object):
         logger.debug('Received volume change of %s', volume)
 
         if not self.check_volume_integrity():
-            logger.error('Cannot modify the volume')
+            logger.error('Cannot modify the volume. Reloading config')
+            # the configuration has possibly changed to fix the issue
+            get_config().load_config()
             return
 
         perceived_new = max(0, min(1, self.perceived_volume + volume))
@@ -147,8 +154,9 @@ class Daemon(service.Object):
         if muted is not None:
             self.notify(self.perceived_volume, muted)
         else:
-            logger.error('Failed to toggle mute')
-
+            logger.error('Failed to toggle mute. Reloading config')
+            # the configuration has possibly changed to fix the issue
+            get_config().load_config()
 
     def notify(self, volume, muted):
         """Display a pretty notification for volume and mute state."""
@@ -176,7 +184,12 @@ if __name__ == '__main__':
     add_filehandler()
     update_verbosity(options.debug)
 
+    set_bus(DBusGMainLoop())
+
     log_info()
+
+    # log some errors if the selected card doesn't exist
+    get_current_card('pcm_output')
 
     # make sure alsacontrols asoundrc is included so that the mixer exists
     setup_asoundrc()

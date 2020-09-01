@@ -36,6 +36,7 @@ from alsacontrol.logger import logger, update_verbosity, log_info
 from alsacontrol.config import get_config
 from alsacontrol.asoundrc import setup_asoundrc
 from alsacontrol.dbus import get_bus
+from alsacontrol.config import output_exists, input_exists
 
 
 def get_volume_icon(volume, muted):
@@ -71,7 +72,8 @@ def get_error_advice(error):
     if 'resource busy' in error:
         return (
             'You can try to run `lsof +D /dev/snd/` to '
-            'see which process is blocking it. It might be jack.'
+            'see which process is blocking it. It might be jack'
+            'or pulseaudio.'
         )
     if 'No such card' in error:
         pcm_output = get_config().get('pcm_output')
@@ -185,6 +187,26 @@ def eavesdrop_volume_notifications(callback):
     bus.add_message_filter(message_eavsedropped)
 
 
+def only_with_existing_input(func):
+    """Decorator to only execute the function when the input exists."""
+    def inner(*args, **kwargs):
+        if input_exists():
+            return func(*args, **kwargs)
+        else:
+            return
+    return inner
+
+
+def only_with_existing_output(func):
+    """Decorator to only execute the function when the output exists."""
+    def inner(*args, **kwargs):
+        if output_exists():
+            return func(*args, **kwargs)
+        else:
+            return
+    return inner
+
+
 class Bindings:
     """Do everything the ui code wants to do without using ui libs."""
     def __init__(self):
@@ -199,6 +221,7 @@ class Bindings:
         options = parser.parse_args(sys.argv[1:])
         update_verbosity(options.debug)
         log_info()
+        setup_asoundrc()
 
         # discover mixers
         play_silence()
