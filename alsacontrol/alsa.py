@@ -203,6 +203,8 @@ def set_volume(volume, pcm_type, nonlinear=False):
 def get_volume(pcm, nonlinear=False):
     """Get the current mixer volume between 0 and 1.
 
+    If it fails, it will return None.
+
     Parameters
     ----------
     pcm : int
@@ -219,7 +221,7 @@ def get_volume(pcm, nonlinear=False):
 
     if mixer_name not in alsaaudio.mixers():
         logger.error('Could not find mixer %s', mixer_name)
-        return 0
+        return None
 
     mixer = alsaaudio.Mixer(mixer_name)
     mixer_volume = mixer.getvolume(pcm)[0] / 100
@@ -231,10 +233,13 @@ def get_volume(pcm, nonlinear=False):
 
 
 def toggle_mute(mixer_name):
-    """Mute or unmute."""
+    """Mute or unmute.
+
+    Returns None if it fails.
+    """
     if mixer_name not in alsaaudio.mixers():
         logger.error('Could not find mixer %s', mixer_name)
-        return False
+        return None
 
     mixer = alsaaudio.Mixer(mixer_name)
     if mixer.getmute()[0]:

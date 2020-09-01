@@ -59,18 +59,22 @@ class Daemon(service.Object):
         # fine grained current mixer volume to better convert from linear
         # to perceived volume without having to worry about rounding.
         # Especially going down by 10% and up by 10% should end up at the
-        # initial volume.
-        # alsamixer only provides a resolution of 100 and softvol of max 1048
-        self.perceived_volume = to_perceived_volume(
-            get_volume(alsaaudio.PCM_PLAYBACK)
-        )
+        # initial volume. alsamixer only provides a resolution of 100
+        # and softvol of max 1048
+        self.perceived_volume = get_volume(alsaaudio.PCM_PLAYBACK, True) or 0
 
         super().__init__(*args, **kwargs)
 
     def check_volume_integrity(self):
-        """If the internal volume is out of touch with the mixer, reset."""
+        """If the internal volume is out of touch with the mixer, reset.
+
+        If the volume handling is broken, return None. Otherwise True.
+        """
         expected_mixer_volume = to_mixer_volume(self.perceived_volume)
         actual_mixer_volume = get_volume(alsaaudio.PCM_PLAYBACK)
+        if actual_mixer_volume is None:
+            return False
+
         if abs(expected_mixer_volume - actual_mixer_volume) > 0.01:
             logger.debug(
                 'Resetting the internal volume '
@@ -79,6 +83,7 @@ class Daemon(service.Object):
                 actual_mixer_volume
             )
             self.perceived_volume = to_perceived_volume(actual_mixer_volume)
+        return True
 
     def show_notification(self, text, icon, hints, short=False):
         """Display a notification in the GUI that replaces the old one.
@@ -120,8 +125,12 @@ class Daemon(service.Object):
         volume : int
             perceived volume change between -1 and +1
         """
-        self.check_volume_integrity()
         logger.debug('Received volume change of %s', volume)
+
+        if not self.check_volume_integrity():
+            logger.error('Cannot modify the volume')
+            return
+
         perceived_new = max(0, min(1, self.perceived_volume + volume))
         mixer_new = to_mixer_volume(perceived_new)
         self.perceived_volume = perceived_new
@@ -135,7 +144,11 @@ class Daemon(service.Object):
         """Mute if unmuted, unmute if muted."""
         logger.debug('Received command to toggle mute')
         muted = toggle_mute(OUTPUT_MUTE)
-        self.notify(self.perceived_volume, muted)
+        if muted is not None:
+            self.notify(self.perceived_volume, muted)
+        else:
+            logger.error('Failed to toggle mute')
+
 
     def notify(self, volume, muted):
         """Display a pretty notification for volume and mute state."""
