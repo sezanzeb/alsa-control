@@ -173,7 +173,7 @@ class Daemon(service.Object):
         logger.info('Changing the volume to %s, %s', volume_string, muted)
 
     def error_notify(self, error):
-        self.show_notification(error, 'gnome-mixer', short=False)
+        self.show_notification(error, 'gnome-mixer', short=True)
 
 
 if __name__ == '__main__':
