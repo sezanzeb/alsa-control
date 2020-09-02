@@ -26,6 +26,7 @@ import os
 from alsacontrol.data import get_data_path
 from alsacontrol.config import get_config
 from alsacontrol.logger import logger
+from alsacontrol.cards import get_pcms
 
 
 alsactl_asoundrc = os.path.expanduser('~/.config/alsacontrol/asoundrc')
@@ -80,21 +81,6 @@ def check_asoundrc():
                         'your rule "%s" conflicts with ALSA-Control',
                         line
                     )
-
-
-def get_pcms():
-    """Return the configured input and output pcm string."""
-    pcm_input = get_config().get('pcm_input', 'null')
-    pcm_output = get_config().get('pcm_output', 'null')
-    if pcm_input == 'null':
-        logger.warning('No input specified')
-    else:
-        logger.info('Using input %s', pcm_input)
-    if pcm_output == 'null':
-        logger.warning('No output specified')
-    else:
-        logger.info('Using output %s', pcm_output)
-    return pcm_input, pcm_output
 
 
 def should_use_dmix(pcm_output):

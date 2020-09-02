@@ -35,14 +35,14 @@ gi.require_version('GLib', '2.0')
 from gi.repository import Notify, GLib
 
 from alsacontrol.asoundrc import setup_asoundrc
+from alsacontrol.cards import output_exists, get_current_card, \
+    only_with_existing_output
+from alsacontrol.alsa import get_volume, set_volume, is_muted, toggle_mute, \
+    OUTPUT_MUTE, to_mixer_volume, to_perceived_volume
+from alsacontrol.bindings import get_volume_icon
 from alsacontrol.logger import logger, update_verbosity, log_info, \
     add_filehandler
-from alsacontrol.alsa import set_volume, get_volume, toggle_mute, \
-    is_muted, to_perceived_volume, to_mixer_volume, OUTPUT_MUTE
-from alsacontrol.bindings import get_volume_icon, get_current_card, \
-    only_with_existing_output
 from alsacontrol.dbus import set_bus
-from alsacontrol.config import output_exists
 
 
 Notify.init('ALSA-Control')
@@ -191,7 +191,7 @@ if __name__ == '__main__':
     setup_asoundrc()
 
     # discover mixers
-    output_exists('Bindings')
+    output_exists('Daemon main')
 
     session_bus = dbus.SessionBus(mainloop=DBusGMainLoop())
     name = dbus.service.BusName('com.alsacontrol.Volume', session_bus)

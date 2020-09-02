@@ -18,16 +18,13 @@
 # You should have received a copy of the GNU General Public License
 # along with ALSA-Control.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Query settings."""
+
+"""Query settings, parse and write config files."""
 
 
 import os
 
-import alsaaudio
-
 from alsacontrol.logger import logger
-from alsacontrol.alsa import get_default_card, get_card, record_to_nowhere, \
-    play_silence
 
 
 _config = None
@@ -68,44 +65,6 @@ def _modify_config(config_contents, key, value):
     return '\n'.join(split)
 
 
-def input_exists(function_name=None):
-    """Check if the configured input card and mixer  is available."""
-    # might be a pcm name with plugin and device
-    card = get_card(get_config().get('pcm_input', None))
-    if function_name is not None:
-        info = f'{function_name}, '
-    else:
-        info = ''
-    if not card in alsaaudio.cards():
-        logger.error('%sCould not find the input card "%s"', info, card)
-        return False
-    if get_config().get('input_use_softvol', True):
-        if 'alsacontrol-input-volume' not in alsaaudio.mixers():
-            logger.error('%sCould not find the input softvol mixer', info)
-            record_to_nowhere()
-            return False
-    return True
-
-
-def output_exists(function_name=None):
-    """Check if the configured output card and mixer is available."""
-    # might be a pcm name with plugin and device
-    card = get_card(get_config().get('pcm_output', None))
-    if function_name is not None:
-        info = f'{function_name}, '
-    else:
-        info = ''
-    if not card in alsaaudio.cards():
-        logger.error('%sCould not find the output card "%s"', info, card)
-        return False
-    if get_config().get('output_use_softvol', True):
-        if 'alsacontrol-output-volume' not in alsaaudio.mixers():
-            logger.error('%sCould not find the output softvol mixer', info)
-            play_silence()
-            return False
-    return True
-
-
 class Config:
     def __init__(self):
         self._path = os.path.expanduser('~/.config/alsacontrol/config')
@@ -119,11 +78,11 @@ class Config:
             os.mknod(self._path)
             # add all default values
             # input
-            self.set('pcm_input', get_default_card(alsaaudio.PCM_CAPTURE))
+            self.set('pcm_input', 'null')
             self.set('input_use_softvol', True)
             self.set('input_use_dsnoop', True)
             # output
-            self.set('pcm_output', get_default_card(alsaaudio.PCM_PLAYBACK))
+            self.set('pcm_output', 'null')
             self.set('output_use_softvol', True)
             self.set('output_use_dmix', True)
 

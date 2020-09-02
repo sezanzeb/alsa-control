@@ -24,10 +24,9 @@
 
 import numpy as np
 
-import dbus
 import alsaaudio
+
 from alsacontrol.logger import logger
-from alsacontrol.dbus import get_bus
 
 
 INPUT_VOLUME = 'alsacontrol-input-volume'
@@ -111,69 +110,6 @@ def record_to_nowhere():
             'Could not initialize input mixer. '
             'Try setting a different device.'
         )
-
-
-def get_default_card(pcm_type):
-    """Return some card that can work as default.
-
-    Parameters
-    ----------
-    pcm_type : int
-        one of alsaaudio.PCM_CAPTURE or alsaaudio.PCM_PLAYBACK
-    """
-    pcms = [pcm for pcm in alsaaudio.pcms(pcm_type) if ':CARD=' in pcm]
-    if len(pcms) == 0:
-        logger.error('Could not find any hw type pcm')
-        return 'null'
-    # Check if a hw Generic exists
-    for pcm in pcms:
-        if 'Generic' in pcm:
-            return f'hw:CARD={get_card(pcm)}'
-    # Check if something else than HDMI exists
-    for pcm in pcms:
-        if 'HDMI' not in pcm:
-            return f'hw:CARD={get_card(pcm)}'
-    # Use anything
-    return f'hw:CARD={get_card(pcms[0])}'
-
-
-def get_card(pcm):
-    """Split the card from a pcm string.
-
-    get "Generic" from iec958:CARD=Generic,DEV=0
-    or sysdefault:CARD=Generic
-    or "jack" from "jack"
-    """
-    if pcm == 'jack':
-        return pcm
-    if ':CARD=' in pcm:
-        card = pcm.split(':CARD=')[1].split(',')[0]
-        return card
-    # unsupported card
-    return None
-
-
-def is_jack_running():
-    """Test if jack is running."""
-    try:
-        remote_object = get_bus().get_object(
-            'org.jackaudio.service',
-            '/org/jackaudio/Controller'
-        )
-        started = remote_object.IsStarted()
-        return started
-    except dbus.exceptions.DBusException:
-        return False
-
-
-def get_cards():
-    """List all cards, including options such as jack."""
-    cards = alsaaudio.cards()
-    if is_jack_running():
-        cards.append('jack')
-    if len(cards) == 0:
-        logger.error('Could not find any card')
-    return cards
 
 
 def set_volume(volume, pcm_type, nonlinear=False):
@@ -277,9 +213,3 @@ def is_muted(mixer_name=OUTPUT_MUTE):
 
     mixer = alsaaudio.Mixer(mixer_name)
     return mixer.getmute()[0] == 1
-
-
-def card_exists(card):
-    """Check if the card is available."""
-    # might be a pcm name with plugin and device
-    return get_card(card) in alsaaudio.cards()

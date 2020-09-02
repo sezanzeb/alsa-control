@@ -19,10 +19,14 @@
 # along with ALSA-Control.  If not, see <https://www.gnu.org/licenses/>.
 
 
-"""To check if pulseaudio is running."""
+"""To check if pulseaudio and/or jack are running."""
 
 
 import os
+
+import dbus
+
+from alsacontrol.dbus import get_bus
 
 
 def is_pulse_running():
@@ -32,3 +36,16 @@ def is_pulse_running():
     """
     return_code = os.system('pulseaudio --check')
     return return_code == 0
+
+
+def is_jack_running():
+    """Test if jack is running."""
+    try:
+        remote_object = get_bus().get_object(
+            'org.jackaudio.service',
+            '/org/jackaudio/Controller'
+        )
+        started = remote_object.IsStarted()
+        return started
+    except dbus.exceptions.DBusException:
+        return False

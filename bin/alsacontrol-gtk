@@ -23,6 +23,8 @@
 
 
 import os
+import sys
+from argparse import ArgumentParser
 
 from dbus.mainloop.glib import DBusGMainLoop
 import alsaaudio
@@ -31,18 +33,20 @@ gi.require_version('Gtk', '3.0')
 gi.require_version('GLib', '2.0')
 from gi.repository import Gtk, GLib
 
-from alsacontrol.alsa import get_volume, set_volume, set_mute, is_muted, \
-    get_cards, OUTPUT_MUTE, INPUT_MUTE, get_level, play_silence, \
-    record_to_nowhere
-from alsacontrol.bindings import Bindings, get_volume_string, \
-    get_volume_icon, get_error_advice, select_input_pcm, select_output_pcm, \
-    get_current_card, eavesdrop_volume_notifications, \
+from alsacontrol.asoundrc import setup_asoundrc
+from alsacontrol.cards import output_exists, input_exists, get_cards, \
+    select_input_pcm, select_output_pcm, get_current_card, \
     only_with_existing_input, only_with_existing_output
+from alsacontrol.alsa import get_volume, set_volume, set_mute, is_muted, \
+    OUTPUT_MUTE, INPUT_MUTE, get_level, play_silence, record_to_nowhere
+from alsacontrol.bindings import get_volume_string, get_volume_icon, \
+    get_error_advice
 from alsacontrol.data import get_data_path
-from alsacontrol.logger import logger
-from alsacontrol.dbus import set_bus
-from alsacontrol.pulse import is_pulse_running
-from alsacontrol.config import output_exists, input_exists
+from alsacontrol.logger import logger, update_verbosity, log_info
+from alsacontrol.dbus import set_bus, eavesdrop_volume_notifications
+from alsacontrol.pulsejack import is_pulse_running
+from alsacontrol.cardstracker import CardsTracker
+from alsacontrol.speakertest import SpeakerTest
 
 
 class HandlerDisabled:
@@ -214,7 +218,8 @@ class InputLevel:
 class ALSAControlWindow:
     """User Interface."""
     def __init__(self):
-        self.bindings = Bindings()
+        self.speaker_test = SpeakerTest()
+        self.cards_tracker = CardsTracker()
 
         self.input_levels = []
         self.input_rows = []
@@ -274,13 +279,13 @@ class ALSAControlWindow:
 
     def on_close(self, *_):
         """Safely close the application."""
-        self.bindings.stop_speaker_test()
+        self.speaker_test.stop_speaker_test()
         self.stop_input_levels()
         Gtk.main_quit()
 
     def refresh_cards(self):
         """Refresh the list of cards for both input and output."""
-        if self.bindings.log_new_pcms():
+        if self.cards_tracker.log_new_pcms():
             self.populate_output_cards_dropdown()
             self.populate_input_pcms()
         return True
@@ -377,6 +382,7 @@ class ALSAControlWindow:
             # already at the correct selection
             return
         select_output_pcm(card_name)
+        setup_asoundrc()
 
     @only_with_existing_output
     def on_output_volume_change(self, gtk_range):
@@ -397,14 +403,14 @@ class ALSAControlWindow:
     @only_with_existing_output
     def on_test_speaker_clicked(self, _):
         """Handler when the speaker test button was pressed."""
-        self.bindings.toggle_speaker_test()
+        self.speaker_test.toggle_speaker_test()
         # after some delay check if it is still running,
         # to show potential errors
         GLib.timeout_add(100, self.check_speaker_test)
 
     def check_speaker_test(self):
         """Adjust the GUI to the speaker test state."""
-        state, error = self.bindings.check_speaker_test()
+        state, error = self.speaker_test.check_speaker_test()
 
         builder = self.builder
         button = builder.get_object('output_test')
@@ -472,6 +478,7 @@ class ALSAControlWindow:
                 input_row.set_active(1)
 
         select_input_pcm(card)
+        setup_asoundrc()
 
     @only_with_existing_input
     def on_input_volume_change(self, gtk_range):
@@ -503,6 +510,22 @@ class ALSAControlWindow:
 
 
 if __name__ == '__main__':
+    parser = ArgumentParser()
+    parser.add_argument(
+        '-d', '--debug', action='store_true', dest='debug',
+        help='Displays additional debug information',
+        default=False
+    )
+
+    options = parser.parse_args(sys.argv[1:])
+    update_verbosity(options.debug)
+    log_info()
+    setup_asoundrc()
+
+    # discover mixers
+    output_exists('GUI main')
+    input_exists('GUI main')
+
     set_bus(DBusGMainLoop())
     ALSAControlWindow()
     Gtk.main()

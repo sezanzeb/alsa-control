@@ -39,3 +39,23 @@ def get_bus():
     if _bus is None:
         raise ValueError('Bus was not initialized')
     return _bus
+
+
+def eavesdrop_volume_notifications(callback):
+    """Listen on the notification DBus for ALSA-Control messages."""
+    bus = get_bus()
+    bus.add_match_string_non_blocking(','.join([
+        "interface='org.freedesktop.Notifications'",
+        "member='Notify'",
+        "eavesdrop='true'"
+    ]))
+
+    def message_eavsedropped(_, msg):
+        """Now figure out if this message is from ALSA-Control."""
+        args = msg.get_args_list()
+        if len(args) > 0:
+            application = str(args[0])
+            if application == 'ALSA-Control':
+                callback()
+
+    bus.add_message_filter(message_eavsedropped)
