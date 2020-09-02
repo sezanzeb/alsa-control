@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=ALSA-Control
+Icon=gnome-mixer
+Exec=alsacontrol-gtk
+Terminal=false
+Categories=Settings;AudioVideo;GTK;
+Comment=ALSA configuration generator and volume control

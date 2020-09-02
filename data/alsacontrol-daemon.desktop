@@ -3,3 +3,4 @@ Type=Application
 Name=ALSA-Control Daemon
 Icon=gnome-mixer
 Exec=alsacontrol-daemon-gtk -d
+Terminal=false

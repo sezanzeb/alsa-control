@@ -56,8 +56,8 @@ Basically provide everything that is needed to comfortably use ALSA without puls
 - [x] Add a dropdown to change output pcm devices
 - [x] Jack support (first start jack, then the GUI to select it)
 - [x] Add a list of input devices and show their input level
-- [ ] Startmenu .desktop entry
-- [ ] Start the daemon on login
+- [x] Startmenu .desktop entry
+- [x] Start the daemon on login
 - [ ] Provide .deb files and get it into the AUR
 
 ## Jack

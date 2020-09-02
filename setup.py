@@ -29,6 +29,7 @@ DistUtilsExtra.auto.setup(
     license='GPL-3.0',
     data_files=[
         ('share/alsacontrol/', ['data/asoundrc-template']),
-        ('/etc/xdg/autostart/', ['data/alsacontrol-daemon.desktop'])
+        ('/etc/xdg/autostart/', ['data/alsacontrol-daemon.desktop']),
+        ('/usr/share/applications/', ['data/alsacontrol.desktop'])
     ]
 )
