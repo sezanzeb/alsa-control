@@ -44,7 +44,7 @@ from alsacontrol.bindings import get_volume_string, get_volume_icon, \
 from alsacontrol.data import get_data_path
 from alsacontrol.logger import logger, update_verbosity, log_info
 from alsacontrol.dbus import set_bus, eavesdrop_volume_notifications
-from alsacontrol.pulsejack import is_pulse_running
+from alsacontrol.services import is_pulse_running
 from alsacontrol.cardstracker import CardsTracker
 from alsacontrol.speakertest import SpeakerTest
 
@@ -372,7 +372,7 @@ class ALSAControlWindow:
 
     def on_output_card_selected(self, card_dropdown):
         """Handler for when a card is selected or the list just changed."""
-        if not output_exists():
+        if not output_exists('on_output_card_selected'):
             play_silence()
 
         card_name = card_dropdown.get_active_text()
@@ -466,7 +466,7 @@ class ALSAControlWindow:
 
     def select_input_card(self, card):
         """Select a card as input source."""
-        if not input_exists():
+        if not input_exists('select_input_card'):
             record_to_nowhere()
 
         label = self.builder.get_object('input_card_name')

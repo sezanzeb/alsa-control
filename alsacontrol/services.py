@@ -19,7 +19,7 @@
 # along with ALSA-Control.  If not, see <https://www.gnu.org/licenses/>.
 
 
-"""To check if pulseaudio and/or jack are running."""
+"""To check if services like pulseaudio are up and running."""
 
 
 import os
@@ -48,4 +48,18 @@ def is_jack_running():
         started = remote_object.IsStarted()
         return started
     except dbus.exceptions.DBusException:
+        return False
+
+
+def is_daemon_running():
+    """Test if the alsacontrol daemon is running."""
+    try:
+        get_bus().get_object(
+            'com.alsacontrol.Volume',
+            '/'
+        )
+        print('yes')
+        return True
+    except dbus.exceptions.DBusException:
+        print('no')
         return False

@@ -25,44 +25,36 @@
 import alsaaudio
 
 from alsacontrol.alsa import play_silence, record_to_nowhere
-from alsacontrol.pulsejack import is_jack_running
+from alsacontrol.services import is_jack_running
 from alsacontrol.logger import logger
 from alsacontrol.config import get_config
 
 
-def input_exists(function_name=None):
+def input_exists(func):
     """Check if the configured input card and mixer is available."""
     # might be a pcm name with plugin and device
     card = get_card(get_config().get('pcm_input', None))
-    if function_name is not None:
-        info = f'{function_name}, '
-    else:
-        info = ''
     if not card in alsaaudio.cards():
-        logger.error('%sCould not find the input card "%s"', info, card)
+        logger.error('%s, Could not find the input card "%s"', func, card)
         return False
     if get_config().get('input_use_softvol', True):
         if 'alsacontrol-input-volume' not in alsaaudio.mixers():
-            logger.error('%sCould not find the input softvol mixer', info)
+            logger.error('%s, Could not find the input softvol mixer', func)
             record_to_nowhere()
             return False
     return True
 
 
-def output_exists(function_name=None):
+def output_exists(func):
     """Check if the configured output card and mixer is available."""
     # might be a pcm name with plugin and device
     card = get_card(get_config().get('pcm_output', None))
-    if function_name is not None:
-        info = f'{function_name}, '
-    else:
-        info = ''
     if not card in alsaaudio.cards():
-        logger.error('%sCould not find the output card "%s"', info, card)
+        logger.error('%s, Could not find the output card "%s"', func, card)
         return False
     if get_config().get('output_use_softvol', True):
         if 'alsacontrol-output-volume' not in alsaaudio.mixers():
-            logger.error('%sCould not find the output softvol mixer', info)
+            logger.error('%s, Could not find the output softvol mixer', func)
             play_silence()
             return False
     return True
@@ -150,7 +142,7 @@ def get_current_card(source):
 def only_with_existing_input(func):
     """Decorator to only execute the function when the input exists."""
     def inner(*args, **kwargs):
-        if input_exists():
+        if input_exists(func.__name__):
             return func(*args, **kwargs)
         return None
     return inner
