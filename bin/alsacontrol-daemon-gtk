@@ -131,8 +131,6 @@ class Daemon(service.Object):
             perceived volume change between -1 and +1
         """
         if not output_exists('change_volume'):
-            # the configuration has possibly changed to fix the issue
-            get_config().load_config()
             return
 
         logger.debug('Received volume change of %s', volume)
@@ -151,8 +149,6 @@ class Daemon(service.Object):
     def toggle_muted(self):
         """Mute if unmuted, unmute if muted."""
         if not output_exists('toggle_muted'):
-            # the configuration has possibly changed to fix the issue
-            get_config().load_config()
             return
 
         logger.debug('Received command to toggle mute')
@@ -196,8 +192,7 @@ if __name__ == '__main__':
     setup_asoundrc()
 
     # discover mixers
-    play_silence()
-    record_to_nowhere()
+    output_exists('Bindings')
 
     session_bus = dbus.SessionBus(mainloop=DBusGMainLoop())
     name = dbus.service.BusName('com.alsacontrol.Volume', session_bus)

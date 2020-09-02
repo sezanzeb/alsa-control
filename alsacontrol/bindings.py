@@ -224,8 +224,8 @@ class Bindings:
         setup_asoundrc()
 
         # discover mixers
-        play_silence()
-        record_to_nowhere()
+        output_exists('Bindings')
+        input_exists('Bindings')
 
         self.output_volume = 0
         self.speaker_test_process = None

@@ -26,7 +26,8 @@ import os
 import alsaaudio
 
 from alsacontrol.logger import logger
-from alsacontrol.alsa import get_default_card, get_card
+from alsacontrol.alsa import get_default_card, get_card, record_to_nowhere, \
+    play_silence
 
 
 _config = None
@@ -81,6 +82,7 @@ def input_exists(function_name=None):
     if get_config().get('input_use_softvol', True):
         if 'alsacontrol-input-volume' not in alsaaudio.mixers():
             logger.error(f'{info}Could not find the input softvol mixer')
+            record_to_nowhere()
             return False
     return True
 
@@ -99,6 +101,7 @@ def output_exists(function_name=None):
     if get_config().get('output_use_softvol', True):
         if 'alsacontrol-output-volume' not in alsaaudio.mixers():
             logger.error(f'{info}Could not find the output softvol mixer')
+            play_silence()
             return False
     return True
 
@@ -124,6 +127,7 @@ class Config:
             self.set('output_use_softvol', True)
             self.set('output_use_dmix', True)
 
+        self.mtime = 0
         self.load_config()
 
     def load_config(self):
@@ -131,6 +135,7 @@ class Config:
         logger.debug('Loading configuration')
         self._config = {}
         # load config
+        self.mtime = os.path.getmtime(self._path)
         with open(self._path, 'r') as config_file:
             for line in config_file:
                 line = line.strip()
@@ -144,12 +149,20 @@ class Config:
                         value = None
                 self._config[key] = value
 
+    def check_mtime(self):
+        """Check if the config file has been modified and reload if needed."""
+        if os.path.getmtime(self._path) != self.mtime:
+            logger.info('Config changed, reloading')
+            self.load_config()
+
     def get(self, key, default=None):
         """Read a value from the configuration."""
+        self.check_mtime()
         return self._config.get(key, default)
 
     def set(self, key, value):
         """Write a setting into memory and ~/.config/alsacontrol/config."""
+        self.check_mtime()
         if key in self._config and self._config[key] == value:
             logger.debug('Setting "%s" is already "%s"', key, value)
             return False
