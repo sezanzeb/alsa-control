@@ -200,7 +200,7 @@ def only_with_existing_input(func):
 def only_with_existing_output(func):
     """Decorator to only execute the function when the output exists."""
     def inner(*args, **kwargs):
-        if output_exists():
+        if output_exists(func.__name__):
             return func(*args, **kwargs)
         else:
             return

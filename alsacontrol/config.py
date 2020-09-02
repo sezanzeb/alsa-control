@@ -67,30 +67,38 @@ def _modify_config(config_contents, key, value):
     return '\n'.join(split)
 
 
-def input_exists():
+def input_exists(function_name=None):
     """Check if the configured input card and mixer  is available."""
     # might be a pcm name with plugin and device
     card = get_card(get_config().get('pcm_input', None))
+    if function_name is not None:
+        info = f'{function_name}, '
+    else:
+        info = ''
     if not card in alsaaudio.cards():
-        logger.error('Could not find the input card')
+        logger.error(f'{info}Could not find the input card "{card}"')
         return False
     if get_config().get('input_use_softvol', True):
         if 'alsacontrol-input-volume' not in alsaaudio.mixers():
-            logger.error('Could not find the input softvol mixer')
+            logger.error(f'{info}Could not find the input softvol mixer')
             return False
     return True
 
 
-def output_exists():
+def output_exists(function_name=None):
     """Check if the configured output card and mixer is available."""
     # might be a pcm name with plugin and device
     card = get_card(get_config().get('pcm_output', None))
+    if function_name is not None:
+        info = f'{function_name}, '
+    else:
+        info = ''
     if not card in alsaaudio.cards():
-        logger.error('Could not find the output card')
+        logger.error(f'{info}Could not find the output card "{card}"')
         return False
     if get_config().get('output_use_softvol', True):
         if 'alsacontrol-output-volume' not in alsaaudio.mixers():
-            logger.error('Could not find the output softvol mixer')
+            logger.error(f'{info}Could not find the output softvol mixer')
             return False
     return True
 
@@ -120,6 +128,7 @@ class Config:
 
     def load_config(self):
         """Read the config file."""
+        logger.debug('Loading configuration')
         self._config = {}
         # load config
         with open(self._path, 'r') as config_file:

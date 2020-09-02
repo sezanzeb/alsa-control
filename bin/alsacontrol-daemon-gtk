@@ -130,13 +130,14 @@ class Daemon(service.Object):
         volume : int
             perceived volume change between -1 and +1
         """
-        logger.debug('Received volume change of %s', volume)
-
-        if not self.check_volume_integrity():
-            logger.error('Cannot modify the volume. Reloading config')
+        if not output_exists('change_volume'):
             # the configuration has possibly changed to fix the issue
             get_config().load_config()
             return
+
+        logger.debug('Received volume change of %s', volume)
+
+        self.check_volume_integrity()
 
         perceived_new = max(0, min(1, self.perceived_volume + volume))
         mixer_new = to_mixer_volume(perceived_new)
@@ -149,14 +150,14 @@ class Daemon(service.Object):
     )
     def toggle_muted(self):
         """Mute if unmuted, unmute if muted."""
-        logger.debug('Received command to toggle mute')
-        muted = toggle_mute(OUTPUT_MUTE)
-        if muted is not None:
-            self.notify(self.perceived_volume, muted)
-        else:
-            logger.error('Failed to toggle mute. Reloading config')
+        if not output_exists('toggle_muted'):
             # the configuration has possibly changed to fix the issue
             get_config().load_config()
+            return
+
+        logger.debug('Received command to toggle mute')
+        muted = toggle_mute(OUTPUT_MUTE)
+        self.notify(self.perceived_volume, muted)
 
     def notify(self, volume, muted):
         """Display a pretty notification for volume and mute state."""
