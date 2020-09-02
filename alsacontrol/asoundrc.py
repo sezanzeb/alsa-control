@@ -83,6 +83,7 @@ def check_asoundrc():
 
 
 def get_pcms():
+    """Return the configured input and output pcm string."""
     pcm_input = get_config().get('pcm_input', 'null')
     pcm_output = get_config().get('pcm_output', 'null')
     if pcm_input == 'null':
@@ -97,6 +98,7 @@ def get_pcms():
 
 
 def should_use_dmix(pcm_output):
+    """Check if, according to config, dmix should and can be used."""
     # use dmix only for hardware devices,
     # if the config is on and if the plugin is hw
     hardware_device = 'CARD=' in pcm_output
@@ -106,6 +108,7 @@ def should_use_dmix(pcm_output):
 
 
 def should_use_dsnoop(pcm_input):
+    """Check if, according to config, dsnoop should and can be used."""
     hardware_device = 'CARD=' in pcm_input
     input_use_dmix = get_config().get('input_use_dsnoop', True)
     input_plugin_hw = pcm_input.startswith('hw:')

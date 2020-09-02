@@ -32,11 +32,12 @@ gi.require_version('GLib', '2.0')
 from gi.repository import Gtk, GLib
 
 from alsacontrol.alsa import get_volume, set_volume, set_mute, is_muted, \
-    get_cards, OUTPUT_MUTE, INPUT_MUTE, get_level
+    get_cards, OUTPUT_MUTE, INPUT_MUTE, get_level, play_silence, \
+    record_to_nowhere
 from alsacontrol.bindings import Bindings, get_volume_string, \
     get_volume_icon, get_error_advice, select_input_pcm, select_output_pcm, \
-    get_current_card, eavesdrop_volume_notifications, play_silence, \
-    record_to_nowhere, only_with_existing_input, only_with_existing_output
+    get_current_card, eavesdrop_volume_notifications, \
+    only_with_existing_input, only_with_existing_output
 from alsacontrol.data import get_data_path
 from alsacontrol.logger import logger
 from alsacontrol.dbus import set_bus
@@ -53,6 +54,7 @@ class HandlerDisabled:
         self.widget = widget
         self.handler = handler
         self.event = event
+        self.was_connected = None
 
     def __enter__(self):
         try:
@@ -162,6 +164,7 @@ class InputLevel:
         self.start_monitoring()
 
     def start_monitoring(self):
+        """Start the loop to monitor the input level."""
         card = self.card
         if card == 'jack':
             card = 'alsacontrol-jack-input'
@@ -176,7 +179,7 @@ class InputLevel:
                 mode=alsaaudio.PCM_NONBLOCK
             )
         except alsaaudio.ALSAAudioError:
-            logger.error(f'Could not monitor the level of "{card}"')
+            logger.error('Could not monitor the level of "%s"', card)
             self.valid = False
             return
 
@@ -184,9 +187,11 @@ class InputLevel:
         GLib.timeout_add(1000 / 60, self.loop)
 
     def stop(self):
+        """Stop monitoring the input level."""
         self.stopped = True
 
     def loop(self):
+        """Refresh the input level of the row."""
         if self.stopped:
             return False
 
@@ -297,6 +302,7 @@ class ALSAControlWindow:
         self.refresh_icon_state('input', input_volume, input_muted)
 
     def on_switch_page(self, notebook, page, page_num):
+        """Handler to trigger when one of the tabs is clicked."""
         page_name = page.get_name()
         input_cards_scrolled_window = self.builder.get_object(
             'input_cards_scrolled_window'
@@ -306,12 +312,6 @@ class ALSAControlWindow:
         else:
             # shrink the output tab height to the contents
             input_cards_scrolled_window.hide()
-            # self.shrink_height()
-
-    def shrink_height(self):
-        """Reduce the windows height as much as possible."""
-        window = self.builder.get_object('alsacontrol_window')
-        window.resize(window.get_size()[0], 1)
 
     def refresh_icon_state(self, tab, volume, muted):
         """Refresh icons and labels depending on mute and volume state.
@@ -347,11 +347,11 @@ class ALSAControlWindow:
     def select_current_output(self):
         """Select the configured values for both dropdowns."""
         with self.dropdown_handlers_disabled():
-            d, card = get_current_card('pcm_output')
+            index, card = get_current_card('pcm_output')
             if card is not None:
                 card_selection = self.card_selection
-                if card_selection.get_active() != d:
-                    card_selection.set_active(d)
+                if card_selection.get_active() != index:
+                    card_selection.set_active(index)
 
     def populate_output_cards_dropdown(self):
         """Get all output options and fill them into the dropdowns."""
@@ -423,7 +423,6 @@ class ALSAControlWindow:
             else:
                 speaker_test_error_text.set_label(error)
         else:
-            # self.shrink_height()
             speaker_test_error.hide()
 
         if state:

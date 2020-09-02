@@ -38,12 +38,11 @@ from alsacontrol.asoundrc import setup_asoundrc
 from alsacontrol.logger import logger, update_verbosity, log_info, \
     add_filehandler
 from alsacontrol.alsa import set_volume, get_volume, toggle_mute, \
-    is_muted, to_perceived_volume, to_mixer_volume, play_silence, \
-    record_to_nowhere, OUTPUT_MUTE
+    is_muted, to_perceived_volume, to_mixer_volume, OUTPUT_MUTE
 from alsacontrol.bindings import get_volume_icon, get_current_card, \
     only_with_existing_output
 from alsacontrol.dbus import set_bus
-from alsacontrol.config import get_config, output_exists
+from alsacontrol.config import output_exists
 
 
 Notify.init('ALSA-Control')

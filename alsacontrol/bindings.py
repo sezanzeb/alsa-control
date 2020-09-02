@@ -30,8 +30,7 @@ from argparse import ArgumentParser
 
 import alsaaudio
 
-from alsacontrol.alsa import get_cards, get_card, play_silence, \
-    record_to_nowhere
+from alsacontrol.alsa import get_cards, get_card
 from alsacontrol.logger import logger, update_verbosity, log_info
 from alsacontrol.config import get_config
 from alsacontrol.asoundrc import setup_asoundrc
@@ -192,8 +191,7 @@ def only_with_existing_input(func):
     def inner(*args, **kwargs):
         if input_exists():
             return func(*args, **kwargs)
-        else:
-            return
+        return None
     return inner
 
 
@@ -202,8 +200,7 @@ def only_with_existing_output(func):
     def inner(*args, **kwargs):
         if output_exists(func.__name__):
             return func(*args, **kwargs)
-        else:
-            return
+        return None
     return inner
 
 

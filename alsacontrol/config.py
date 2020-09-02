@@ -77,11 +77,11 @@ def input_exists(function_name=None):
     else:
         info = ''
     if not card in alsaaudio.cards():
-        logger.error(f'{info}Could not find the input card "{card}"')
+        logger.error('%sCould not find the input card "%s"', info, card)
         return False
     if get_config().get('input_use_softvol', True):
         if 'alsacontrol-input-volume' not in alsaaudio.mixers():
-            logger.error(f'{info}Could not find the input softvol mixer')
+            logger.error('%sCould not find the input softvol mixer', info)
             record_to_nowhere()
             return False
     return True
@@ -96,11 +96,11 @@ def output_exists(function_name=None):
     else:
         info = ''
     if not card in alsaaudio.cards():
-        logger.error(f'{info}Could not find the output card "{card}"')
+        logger.error('%sCould not find the output card "%s"', info, card)
         return False
     if get_config().get('output_use_softvol', True):
         if 'alsacontrol-output-volume' not in alsaaudio.mixers():
-            logger.error(f'{info}Could not find the output softvol mixer')
+            logger.error('%sCould not find the output softvol mixer', info)
             play_silence()
             return False
     return True

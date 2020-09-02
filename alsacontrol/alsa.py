@@ -73,8 +73,8 @@ def play_silence():
         )
         data = b'\x00' * 32
         pcm.write(data)
-    except alsaaudio.ALSAAudioError as e:
-        error = str(e)
+    except alsaaudio.ALSAAudioError as error:
+        error = str(error)
         logger.error(error)
         if 'resource busy' in error:
             logger.error(
@@ -99,8 +99,8 @@ def record_to_nowhere():
             device='default'
         )
         pcm.read()
-    except alsaaudio.ALSAAudioError as e:
-        error = str(e)
+    except alsaaudio.ALSAAudioError as error:
+        error = str(error)
         logger.error(error)
         if 'resource busy' in error:
             logger.error(
