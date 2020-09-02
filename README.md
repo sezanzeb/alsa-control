@@ -58,6 +58,7 @@ Basically provide everything that is needed to comfortably use ALSA without puls
 - [x] Add a list of input devices and show their input level
 - [x] Startmenu .desktop entry
 - [x] Start the daemon on login
+- [ ] Make dmix, softvol, dsnoop, channels and samplerate configurable
 - [ ] Provide .deb files and get it into the AUR
 
 ## Jack
