@@ -30,14 +30,14 @@ from alsacontrol.logger import logger
 from alsacontrol.config import get_config
 
 
-def input_exists(func):
+def input_exists(func, testcard=True, testmixer=True):
     """Check if the configured input card and mixer is available."""
     # might be a pcm name with plugin and device
     card = get_card(get_config().get('pcm_input', None))
-    if not card in alsaaudio.cards():
+    if testcard and not card in alsaaudio.cards():
         logger.error('%s, Could not find the input card "%s"', func, card)
         return False
-    if get_config().get('input_use_softvol', True):
+    if testmixer and get_config().get('input_use_softvol', True):
         if 'alsacontrol-input-volume' not in alsaaudio.mixers():
             logger.error('%s, Could not find the input softvol mixer', func)
             record_to_nowhere()
@@ -45,14 +45,14 @@ def input_exists(func):
     return True
 
 
-def output_exists(func):
+def output_exists(func, testcard=True, testmixer=True):
     """Check if the configured output card and mixer is available."""
     # might be a pcm name with plugin and device
     card = get_card(get_config().get('pcm_output', None))
-    if not card in alsaaudio.cards():
+    if testcard and not card in alsaaudio.cards():
         logger.error('%s, Could not find the output card "%s"', func, card)
         return False
-    if get_config().get('output_use_softvol', True):
+    if testmixer and get_config().get('output_use_softvol', True):
         if 'alsacontrol-output-volume' not in alsaaudio.mixers():
             logger.error('%s, Could not find the output softvol mixer', func)
             play_silence()

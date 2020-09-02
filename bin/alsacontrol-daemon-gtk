@@ -64,7 +64,7 @@ class Daemon(service.Object):
         # Especially going down by 10% and up by 10% should end up at the
         # initial volume. alsamixer only provides a resolution of 100
         # and softvol of max 1048
-        if output_exists('Daemon'):
+        if output_exists('Daemon', testcard=False):
             self.perceived_volume = get_volume(alsaaudio.PCM_PLAYBACK, True)
         else:
             self.perceived_volume = 0
@@ -90,7 +90,7 @@ class Daemon(service.Object):
             self.perceived_volume = to_perceived_volume(actual_mixer_volume)
         return True
 
-    def show_notification(self, text, icon, hints, short=False):
+    def show_notification(self, text, icon, hints=None, short=False):
         """Display a notification in the GUI that replaces the old one.
 
         Parameters
@@ -109,8 +109,9 @@ class Daemon(service.Object):
         if self._notification_id is not None:
             notification.props.id = self._notification_id
 
-        for key in hints:
-            notification.set_hint(key, hints[key])
+        if hints is not None:
+            for key in hints:
+                notification.set_hint(key, hints[key])
 
         if short:
             notification.set_timeout(200)
@@ -130,7 +131,8 @@ class Daemon(service.Object):
         volume : int
             perceived volume change between -1 and +1
         """
-        if not output_exists('change_volume'):
+        if not output_exists('change_volume', testcard=False):
+            self.error_notify('Mixer not found')
             return
 
         logger.debug('Received volume change of %s', volume)
@@ -148,7 +150,8 @@ class Daemon(service.Object):
     )
     def toggle_muted(self):
         """Mute if unmuted, unmute if muted."""
-        if not output_exists('toggle_muted'):
+        if not output_exists('toggle_muted', testcard=False):
+            self.error_notify('Mixer not found')
             return
 
         logger.debug('Received command to toggle mute')
@@ -168,6 +171,9 @@ class Daemon(service.Object):
 
         muted = 'muted' if muted else 'unmuted'
         logger.info('Changing the volume to %s, %s', volume_string, muted)
+
+    def error_notify(self, error):
+        self.show_notification(error, 'gnome-mixer', short=False)
 
 
 if __name__ == '__main__':
