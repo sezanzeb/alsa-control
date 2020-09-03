@@ -58,8 +58,6 @@ def is_daemon_running():
             'com.alsacontrol.Volume',
             '/'
         )
-        print('yes')
         return True
     except dbus.exceptions.DBusException:
-        print('no')
         return False

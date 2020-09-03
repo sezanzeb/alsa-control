@@ -43,7 +43,7 @@ from alsacontrol.bindings import get_volume_icon
 from alsacontrol.logger import logger, update_verbosity, log_info, \
     add_filehandler
 from alsacontrol.dbus import set_bus
-from alsacontrol.services import is_daemon_running
+from alsacontrol.services import is_daemon_running, is_pulse_running
 
 
 Notify.init('ALSA-Control')
@@ -188,6 +188,9 @@ if __name__ == '__main__':
     update_verbosity(options.debug)
 
     set_bus(DBusGMainLoop())
+
+    if is_pulse_running():
+        logger.error('Pulseaudio is running')
 
     if is_daemon_running():
         logger.error('The daemon is already running')
