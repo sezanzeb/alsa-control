@@ -498,7 +498,9 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
-                    <property name="tooltip_text" translatable="yes">The Daemon is needed to watch for volume changes and display notifications.</property>
+                    <property name="tooltip_text" translatable="yes">The Daemon is needed to watch for volume changes and display notifications.
+
+You need to add `alsacontrol` shortcuts in order to do so. See `alsacontrol --help`</property>
                     <signal name="clicked" handler="on_toggle_daemon_clicked" swapped="no"/>
                   </object>
                   <packing>
