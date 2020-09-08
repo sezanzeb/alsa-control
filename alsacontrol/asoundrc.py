@@ -109,32 +109,32 @@ def create_asoundrc():
 
     # dmix has to be the last step, so its output is always pcm_output
     if pcm_output == 'jack':
-        last_step = 'alsacontrol-plug'
+        last_output_step = 'alsacontrol-plug'
     elif should_use_dmix(pcm_output):
-        last_step = 'alsacontrol-dmix'
+        last_output_step = 'alsacontrol-dmix'
     else:
-        last_step = pcm_output
+        last_output_step = pcm_output
     # either from asym directly to the last step, or over softvol
     if get_config().get('output_use_softvol', True):
         output_pcm_asym = 'alsacontrol-output-softvol'
-        output_pcm_softvol = last_step
+        output_pcm_softvol = last_output_step
     else:
-        output_pcm_asym = last_step
+        output_pcm_asym = last_output_step
         output_pcm_softvol = 'null'
 
     # dsnoop has to be the last step, so its output is always pcm_input
     if pcm_input == 'jack':
-        last_step = 'alsacontrol-plug'
+        last_input_step = 'alsacontrol-plug'
     elif should_use_dsnoop(pcm_input):
-        last_step = 'alsacontrol-dsnoop'
+        last_input_step = 'alsacontrol-dsnoop'
     else:
-        last_step = pcm_input
+        last_input_step = pcm_input
     # either from asym directly to the last step, or over softvol
     if get_config().get('input_use_softvol', True):
         input_pcm_asym = 'alsacontrol-output-softvol'
-        input_pcm_softvol = last_step
+        input_pcm_softvol = last_input_step
     else:
-        input_pcm_asym = last_step
+        input_pcm_asym = last_input_step
         input_pcm_softvol = 'null'
 
     asoundrc_config = {
