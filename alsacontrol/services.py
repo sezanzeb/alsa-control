@@ -23,10 +23,12 @@
 
 
 import os
+import subprocess
 
 import dbus
 
 from alsacontrol.dbus import get_bus
+from alsacontrol.logger import logger
 
 
 def is_pulse_running():
@@ -36,6 +38,17 @@ def is_pulse_running():
     """
     return_code = os.system('pulseaudio --check')
     return return_code == 0
+
+
+def stop_pulse():
+    """Stop the pulseaudio service using systemctl."""
+    if is_pulse_running():
+        logger.info('Stopping pulseaudio')
+        os.system('systemctl --user stop pulseaudio.service')
+        os.system('systemctl --user stop pulseaudio.socket')
+        os.system('pulseaudio -k')
+    else:
+        logger.info('Pulseaudio is not running')
 
 
 def is_jack_running():
@@ -61,3 +74,28 @@ def is_daemon_running():
         return True
     except dbus.exceptions.DBusException:
         return False
+
+
+def toggle_daemon():
+    """Start or stop the daemon."""
+    if is_daemon_running():
+        stop_daemon()
+    else:
+        start_daemon()
+
+
+def stop_daemon():
+    """Stop the alsacontrol daemon."""
+    # stops alsacontrol-daemon-gtk or alsacontrol-daemon-qt if that should
+    # ever exist in the future
+    logger.info('Stopping the alsacontrol daemon')
+    os.system('pkill -f alsacontrol-daemon')
+
+
+def start_daemon(debug=True):
+    """Start the alsacontrol daemon."""
+    logger.info('Starting the alsacontrol daemon')
+    cmd = ['alsacontrol-daemon-gtk']
+    if debug:
+        cmd.append('-d')
+    subprocess.Popen(cmd)

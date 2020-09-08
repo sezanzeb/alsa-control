@@ -44,7 +44,8 @@ from alsacontrol.bindings import get_volume_string, get_volume_icon, \
 from alsacontrol.data import get_data_path
 from alsacontrol.logger import logger, update_verbosity, log_info
 from alsacontrol.dbus import set_bus, eavesdrop_volume_notifications
-from alsacontrol.services import is_pulse_running
+from alsacontrol.services import is_pulse_running, stop_pulse, toggle_daemon, \
+    is_daemon_running
 from alsacontrol.cardstracker import CardsTracker
 from alsacontrol.speakertest import SpeakerTest
 
@@ -251,17 +252,24 @@ class ALSAControlWindow:
 
         eavesdrop_volume_notifications(self.volume_changed_externally)
 
+        self.check_pulse()
+
+        GLib.timeout_add(500, self.refresh_cards)
+        GLib.timeout_add(500, self.refresh_toggle_daemon_text)
+
+    """General Stuff"""
+
+    def check_pulse(self):
+        """If pulsaudio is running, show warning text and stop button."""
         if is_pulse_running():
             logger.error('Pulseaudio is running')
-            builder.get_object('status_bar_text').set_text(
+            self.builder.get_object('status_bar_text').set_text(
                 'This app may not work correctly with Pulseaudio.\n'
                 'Consider using pavucontrol instead.'
             )
-            builder.get_object('status_bar').show()
-
-        GLib.timeout_add(500, self.refresh_cards)
-
-    """General Stuff"""
+            self.builder.get_object('status_bar').show()
+        else:
+            self.builder.get_object('status_bar').hide()
 
     @only_with_existing_output
     @only_with_existing_input
@@ -340,6 +348,29 @@ class ALSAControlWindow:
         volume_icon_name = get_volume_icon(volume, muted)
         volume_image = self.builder.get_object(f'{tab}_volume_icon')
         volume_image.set_from_icon_name(volume_icon_name, Gtk.IconSize.BUTTON)
+
+    def on_stop_pulseaudio_clicked(self, _):
+        """Stop pulsaudio."""
+        stop_pulse()
+        # wait a second to actually see the result. It might just start
+        # again which is normal in pulseaudio
+        GLib.timeout_add(1000, self.check_pulse)
+
+    def on_toggle_daemon_clicked(self, _):
+        """Start or stop the daemon."""
+        toggle_daemon()
+
+    def refresh_toggle_daemon_text(self):
+        """Set the toggle daemon button text depending on if it is running."""
+        label = self.get_toggle_daemon_text(is_daemon_running())
+        self.builder.get_object('toggle_daemon').set_label(label)
+        return True
+
+    def get_toggle_daemon_text(self, running):
+        if running:
+            return 'Stop Daemon'
+        else:
+            return 'Start Daemon'
 
     """Output"""
 
