@@ -105,9 +105,6 @@ def create_asoundrc():
     """Create and populate ~/.config/alsacontrol/asoundrc."""
     pcm_input, pcm_output = get_pcms()
 
-    # connect the various plugins
-
-    # dmix has to be the last step, so its output is always pcm_output
     if pcm_output == 'jack':
         last_output_step = 'alsacontrol-plug'
     elif should_use_dmix(pcm_output):
@@ -122,7 +119,6 @@ def create_asoundrc():
         output_pcm_asym = last_output_step
         output_pcm_softvol = 'null'
 
-    # dsnoop has to be the last step, so its output is always pcm_input
     if pcm_input == 'jack':
         last_input_step = 'alsacontrol-plug'
     elif should_use_dsnoop(pcm_input):
@@ -137,6 +133,7 @@ def create_asoundrc():
         input_pcm_asym = last_input_step
         input_pcm_softvol = 'null'
 
+    # dmix and dsnoop always have to be the last step
     asoundrc_config = {
         'output_pcm_asym': output_pcm_asym,
         'output_pcm_softvol': output_pcm_softvol,
