@@ -49,7 +49,7 @@ def output_exists(func, testcard=True, testmixer=True):
     """Check if the configured output card and mixer is available."""
     # might be a pcm name with plugin and device
     card = get_card(get_config().get('pcm_output', None))
-    if testcard and not card in alsaaudio.cards():
+    if testcard and not card in get_cards():
         logger.error('%s, Could not find the output card "%s"', func, card)
         return False
     if testmixer and get_config().get('output_use_softvol', True):

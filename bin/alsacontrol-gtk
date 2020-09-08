@@ -541,6 +541,8 @@ class ALSAControlWindow:
 
 
 if __name__ == '__main__':
+    set_bus(DBusGMainLoop())
+
     parser = ArgumentParser()
     parser.add_argument(
         '-d', '--debug', action='store_true', dest='debug',
@@ -557,6 +559,5 @@ if __name__ == '__main__':
     output_exists('GUI main')
     input_exists('GUI main')
 
-    set_bus(DBusGMainLoop())
     ALSAControlWindow()
     Gtk.main()
