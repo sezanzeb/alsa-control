@@ -40,6 +40,12 @@ def is_pulse_running():
     return return_code == 0
 
 
+def is_xfce4_pulse_plugin_running():
+    """This plugin can prevent properly working multimedia volume keys."""
+    return_code = os.system('ps aux | grep libpulseaudio | grep grep -v')
+    return return_code == 0
+
+
 def stop_pulse():
     """Stop the pulseaudio service using systemctl."""
     if is_pulse_running():
