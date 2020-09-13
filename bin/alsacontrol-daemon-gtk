@@ -194,10 +194,10 @@ if __name__ == '__main__':
         logger.error('The xfce4 libpulseaudio-plugin is running')
 
     if is_pulse_running():
-        logger.error('Pulseaudio is running')
+        logger.fatal('Pulseaudio is running')
 
     if is_daemon_running():
-        logger.error('The daemon is already running')
+        logger.fatal('The daemon is already running')
         raise SystemExit(1)
 
     log_info()

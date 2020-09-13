@@ -262,14 +262,18 @@ class ALSAControlWindow:
     def check_pulse(self):
         """If pulsaudio is running, show warning text and stop button."""
         if is_pulse_running():
-            logger.error('Pulseaudio is running')
-            self.builder.get_object('status_bar_text').set_text(
-                'This app may not work correctly with Pulseaudio.\n'
-                'Consider using pavucontrol instead.'
+            logger.fatal('Pulseaudio is running')
+            self.builder.get_object('pulse_dialog_text').set_text(
+                'This app may not work correctly with Pulseaudio. '
+                'Consider using pavucontrol instead or stop it.'
             )
-            self.builder.get_object('status_bar').show()
+            self.builder.get_object('pulse_dialog').show()
         else:
-            self.builder.get_object('status_bar').hide()
+            self.builder.get_object('pulse_dialog').hide()
+
+    def on_close_pulse_dialog_clicked(self, _):
+        """Hide the pulseaudio warning dialog."""
+        self.builder.get_object('pulse_dialog').hide()
 
     @only_with_existing_output
     @only_with_existing_input
@@ -353,7 +357,8 @@ class ALSAControlWindow:
         """Stop pulsaudio."""
         stop_pulse()
         # wait a second to actually see the result. It might just start
-        # again which is normal in pulseaudio
+        # again, but since systemctl is used to stop it it is unlikely.
+        self.builder.get_object('pulse_dialog').hide()
         GLib.timeout_add(1000, self.check_pulse)
 
     def on_toggle_daemon_clicked(self, _):
