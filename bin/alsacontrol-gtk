@@ -367,10 +367,7 @@ class ALSAControlWindow:
 
     def get_toggle_daemon_text(self, running):
         """Get the toggle button text depending on the daemon state."""
-        if running:
-            return 'Stop Daemon'
-        else:
-            return 'Start Daemon'
+        return 'Stop Daemon' if running else 'Start Daemon'
 
     def populate_advanced_settings(self):
         """Display the current configuration in the Advanced tab."""
@@ -380,53 +377,34 @@ class ALSAControlWindow:
         use_dsnoop = self.builder.get_object('use_dsnoop')
         use_input_softvol = self.builder.get_object('use_input_softvol')
         with HandlerDisabled([
-            use_dmix,
-            use_output_softvol,
-            num_output_channels,
-            use_dsnoop,
-            use_input_softvol
-        ], self.update_config):
+                use_dmix,
+                use_output_softvol,
+                num_output_channels,
+                use_dsnoop,
+                use_input_softvol
+            ],
+            self.update_config
+        ):
             config = get_config()
-            use_dmix.set_active(
-                config.get('output_use_dmix')
-            )
-            use_output_softvol.set_active(
-                config.get('output_use_softvol')
-            )
-            num_output_channels.set_value(
-                config.get('output_channels')
-            )
-            use_dsnoop.set_active(
-                config.get('input_use_dsnoop')
-            )
-            use_input_softvol.set_active(
-                config.get('input_use_softvol')
-            )
+            use_dmix.set_active(config.get('output_use_dmix'))
+            use_output_softvol.set_active(config.get('output_use_softvol'))
+            num_output_channels.set_value(config.get('output_channels'))
+            use_dsnoop.set_active(config.get('input_use_dsnoop'))
+            use_input_softvol.set_active(config.get('input_use_softvol'))
 
     def update_config(self, _):
         """Update all config values based on the advanced configuration."""
-        print('update_config')
+        use_dmix = self.builder.get_object('use_dmix')
+        use_output_softvol = self.builder.get_object('use_output_softvol')
+        num_output_channels = self.builder.get_object('num_output_channels')
+        use_dsnoop = self.builder.get_object('use_dsnoop')
+        use_input_softvol = self.builder.get_object('use_input_softvol')
         config = get_config()
-        config.set(
-            'output_use_dmix',
-            self.builder.get_object('use_dmix').get_active()
-        )
-        config.set(
-            'output_use_softvol',
-            self.builder.get_object('use_output_softvol').get_active()
-        )
-        config.set(
-            'output_channels',
-            int(self.builder.get_object('num_output_channels').get_value())
-        )
-        config.set(
-            'input_use_dsnoop',
-            self.builder.get_object('use_dsnoop').get_active()
-        )
-        config.set(
-            'input_use_softvol',
-            self.builder.get_object('use_input_softvol').get_active()
-        )
+        config.set('output_use_dmix', use_dmix.get_active())
+        config.set('output_use_softvol', use_output_softvol.get_active())
+        config.set('output_channels', num_output_channels.get_value())
+        config.set('input_use_dsnoop', use_dsnoop.get_active())
+        config.set('input_use_softvol', use_input_softvol.get_active())
 
     """Output"""
 

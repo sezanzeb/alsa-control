@@ -79,6 +79,7 @@ def _modify_config(config_contents, key, value):
 
 
 class Config:
+    """Read and set config values."""
     def __init__(self):
         self._path = os.path.expanduser('~/.config/alsacontrol/config')
         self._config = {}
@@ -111,7 +112,6 @@ class Config:
         with open(self._path, 'r') as config_file:
             for line in config_file:
                 line = line.strip()
-                print('line', line)
                 if not line.startswith('#'):
                     split = line.split('=', 1)
                     if len(split) == 2:
@@ -120,7 +120,6 @@ class Config:
                     else:
                         key = split[0]
                         value = None
-                print('reading', key, value)
                 if value.isdigit():
                     value = int(value)
                 if value == 'True':
@@ -148,23 +147,25 @@ class Config:
         if key not in _defaults:
             logger.error('Unknown setting %s', key)
             return None
+
         self.check_mtime()
+
         if key in self._config and self._config[key] == value:
             logger.debug('Setting "%s" is already "%s"', key, value)
             return False
-        else:
-            self._config[key] = value
 
-            with open(self._path, 'r+') as config_file:
-                config_contents = config_file.read()
-                config_contents = _modify_config(config_contents, key, value)
+        self._config[key] = value
 
-            # overwrite completely
-            with open(self._path, 'w') as config_file:
-                if not config_contents.endswith('\n'):
-                    config_contents += '\n'
-                config_file.write(config_contents)
-            return True
+        with open(self._path, 'r+') as config_file:
+            config_contents = config_file.read()
+            config_contents = _modify_config(config_contents, key, value)
+
+        # overwrite completely
+        with open(self._path, 'w') as config_file:
+            if not config_contents.endswith('\n'):
+                config_contents += '\n'
+            config_file.write(config_contents)
+        return True
 
 
 def get_config():

@@ -179,6 +179,7 @@ class Daemon(service.Object):
         logger.info('Changing the volume to %s, %s', volume_string, muted)
 
     def error_notify(self, error):
+        """Display a notification containing an error text."""
         self.show_notification(error, 'gnome-mixer', short=True)
 
 
