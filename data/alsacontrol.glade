@@ -538,9 +538,9 @@ You need to add `alsacontrol` shortcuts in order to do so. See `alsacontrol --he
                     <property name="margin_bottom">10</property>
                     <property name="label" translatable="yes">Applications needs to be restarted to play their sound through your selected device.
 
-If you would like to set jack as one of your devices, first start jack, set up your input and output there and then start ALSA-Control. Otherwise the input level monitoring will block jack from acquiring the device. The volume control continues to work with jack.
+To debug problems, try to start this application from a console and add --debug.
 
-Having Pulseaudio on while using this may not work as expected. You can use pavucontrol instead to setup your pulseaudio devices.
+If you would like to set jack as one of your devices, first start jack, set up your input and output there and then start ALSA-Control. Otherwise the input level monitoring will block jack from acquiring the device. The volume control continues to work with jack.
 
 Please report bugs at &lt;a href="https://github.com/sezanzeb/ALSA-Control/issues"&gt;github.com/sezanzeb/alsa-control/issues&lt;/a&gt;</property>
                     <property name="use_markup">True</property>

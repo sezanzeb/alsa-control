@@ -19,7 +19,12 @@
 # along with ALSA-Control.  If not, see <https://www.gnu.org/licenses/>.
 
 
-"""Displays notifications for the current volume."""
+"""Displays notifications for the current volume.
+
+This needs to be done by a daemon, so that it can hold a state and
+replace the old notification with the outdated volume instead of
+stacking them.
+"""
 
 
 import sys
