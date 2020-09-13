@@ -21,6 +21,9 @@ alsacontrol-gtk
 <p align="center">
     <img src="data/input-devices.png"/>
 </p>
+<p align="center">
+    <img src="data/advanced.png"/>
+</p>
 
 If it didn't already start due to a system restart, you can start the daemon with:
 
