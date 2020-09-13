@@ -127,7 +127,7 @@ def create_asoundrc():
         last_input_step = pcm_input
     # either from asym directly to the last step, or over softvol
     if get_config().get('input_use_softvol'):
-        input_pcm_asym = 'alsacontrol-output-softvol'
+        input_pcm_asym = 'alsacontrol-input-softvol'
         input_pcm_softvol = last_input_step
     else:
         input_pcm_asym = last_input_step

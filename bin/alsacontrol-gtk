@@ -405,6 +405,7 @@ class ALSAControlWindow:
         config.set('output_channels', int(num_output_channels.get_value()))
         config.set('input_use_dsnoop', use_dsnoop.get_active())
         config.set('input_use_softvol', use_input_softvol.get_active())
+        setup_asoundrc()
 
     """Output"""
 

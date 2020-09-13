@@ -79,6 +79,10 @@ def update_verbosity(debug):
         logger.setLevel(logging.INFO)
 
 
+def debug_log_on():
+    return logger.level == logging.DEBUG
+
+
 def add_filehandler():
     """Clear the existing logfile and start logging to it."""
     # jack also logs to ~/.log

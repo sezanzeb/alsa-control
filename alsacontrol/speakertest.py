@@ -25,7 +25,7 @@ import os
 import signal
 import subprocess
 
-from alsacontrol.logger import logger
+from alsacontrol.logger import logger, debug_log_on
 from alsacontrol.config import get_config
 
 
@@ -41,7 +41,7 @@ class SpeakerTest:
         Returns the subprocess or False if it has been stopped.
         """
         if self.speaker_test_process is None:
-            num_channels = get_config().get('num_output_channels')
+            num_channels = get_config().get('output_channels')
             cmd = f'speaker-test -D default -c {num_channels} -twav'.split()
             logger.info('Testing speakers, %d channels', num_channels)
             process = subprocess.Popen(
@@ -122,6 +122,10 @@ class SpeakerTest:
                     'been stopped'
                 )
                 # It has already been stopped
+            if debug_log_on():
+                stdout = self._read_from_std(self.speaker_test_process.stdout)
+                for line in stdout:
+                    logger.debug('speaker-test stdout: %s', line)
             self.speaker_test_process = None
 
     def _read_from_std(self, source):
