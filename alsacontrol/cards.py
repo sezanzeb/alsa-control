@@ -33,11 +33,11 @@ from alsacontrol.config import get_config
 def input_exists(func, testcard=True, testmixer=True):
     """Check if the configured input card and mixer is available."""
     # might be a pcm name with plugin and device
-    card = get_card(get_config().get('pcm_input', None))
+    card = get_card(get_config().get('pcm_input'))
     if testcard and not card in alsaaudio.cards():
         logger.error('%s, Could not find the input card "%s"', func, card)
         return False
-    if testmixer and get_config().get('input_use_softvol', True):
+    if testmixer and get_config().get('input_use_softvol'):
         if 'alsacontrol-input-volume' not in alsaaudio.mixers():
             logger.error('%s, Could not find the input softvol mixer', func)
             record_to_nowhere()
@@ -48,11 +48,11 @@ def input_exists(func, testcard=True, testmixer=True):
 def output_exists(func, testcard=True, testmixer=True):
     """Check if the configured output card and mixer is available."""
     # might be a pcm name with plugin and device
-    card = get_card(get_config().get('pcm_output', None))
+    card = get_card(get_config().get('pcm_output'))
     if testcard and not card in get_cards():
         logger.error('%s, Could not find the output card "%s"', func, card)
         return False
-    if testmixer and get_config().get('output_use_softvol', True):
+    if testmixer and get_config().get('output_use_softvol'):
         if 'alsacontrol-output-volume' not in alsaaudio.mixers():
             logger.error('%s, Could not find the output softvol mixer', func)
             play_silence()
@@ -62,8 +62,8 @@ def output_exists(func, testcard=True, testmixer=True):
 
 def get_pcms():
     """Return the configured input and output pcm string."""
-    pcm_input = get_config().get('pcm_input', 'null')
-    pcm_output = get_config().get('pcm_output', 'null')
+    pcm_input = get_config().get('pcm_input')
+    pcm_output = get_config().get('pcm_output')
     if pcm_input == 'null':
         logger.warning('No input specified')
     else:
@@ -120,7 +120,7 @@ def get_current_card(source):
     A tuple of (d, card) with d being the index in
     the list of options from get_cards.
     """
-    pcm_name = get_config().get(source, 'null')
+    pcm_name = get_config().get(source)
     if pcm_name == 'null':
         logger.warning('No input selected')
         return None, None
@@ -168,7 +168,7 @@ def select_output_pcm(card):
     # figure out if this is an actual hardware device or not
     cards = alsaaudio.cards()
     if card in cards:
-        plugin = get_config().get('output_plugin', 'hw')
+        plugin = get_config().get('output_plugin')
         pcm_name = f'{plugin}:CARD={card}'
     else:
         pcm_name = card  # otherwise probably jack
@@ -186,7 +186,7 @@ def select_input_pcm(card):
     # figure out if this is an actual hardware device or not
     cards = alsaaudio.cards()
     if card in cards:
-        plugin = get_config().get('input_plugin', 'sysdefault')
+        plugin = get_config().get('input_plugin')
         pcm_name = f'{plugin}:CARD={card}'
     else:
         pcm_name = card  # otherwise probably jack

@@ -30,6 +30,19 @@ from alsacontrol.logger import logger
 _config = None
 
 
+_defaults = {
+    'pcm_input': 'null',
+    'input_use_dsnoop': True,
+    'input_use_softvol': True,
+    'input_plugin': 'hw',
+    'pcm_output': 'null',
+    'output_use_dmix': True,
+    'output_use_softvol': True,
+    'output_channels': 2,
+    'output_plugin': 'hw'
+}
+
+
 def _modify_config(config_contents, key, value):
     """Write settings into a config files contents.
 
@@ -98,6 +111,7 @@ class Config:
         with open(self._path, 'r') as config_file:
             for line in config_file:
                 line = line.strip()
+                print('line', line)
                 if not line.startswith('#'):
                     split = line.split('=', 1)
                     if len(split) == 2:
@@ -106,6 +120,13 @@ class Config:
                     else:
                         key = split[0]
                         value = None
+                print('reading', key, value)
+                if value.isdigit():
+                    value = int(value)
+                if value == 'True':
+                    value = True
+                if value == 'False':
+                    value = False
                 self._config[key] = value
 
     def check_mtime(self):
@@ -114,13 +135,19 @@ class Config:
             logger.info('Config changed, reloading')
             self.load_config()
 
-    def get(self, key, default=None):
-        """Read a value from the configuration."""
+    def get(self, key):
+        """Read a value from the configuration or get the default."""
         self.check_mtime()
-        return self._config.get(key, default)
+        if key not in _defaults:
+            logger.error('Unknown setting %s', key)
+            return None
+        return self._config.get(key, _defaults[key])
 
     def set(self, key, value):
         """Write a setting into memory and ~/.config/alsacontrol/config."""
+        if key not in _defaults:
+            logger.error('Unknown setting %s', key)
+            return None
         self.check_mtime()
         if key in self._config and self._config[key] == value:
             logger.debug('Setting "%s" is already "%s"', key, value)

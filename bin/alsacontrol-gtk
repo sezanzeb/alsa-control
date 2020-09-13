@@ -48,6 +48,7 @@ from alsacontrol.services import is_pulse_running, stop_pulse, toggle_daemon, \
     is_daemon_running
 from alsacontrol.cardstracker import CardsTracker
 from alsacontrol.speakertest import SpeakerTest
+from alsacontrol.config import get_config
 
 
 class HandlerDisabled:
@@ -55,26 +56,17 @@ class HandlerDisabled:
 
     Use in a with statement.
     """
-    def __init__(self, widget, event, handler):
-        self.widget = widget
+    def __init__(self, widgets, handler):
+        self.widgets = widgets
         self.handler = handler
-        self.event = event
-        self.was_connected = None
 
     def __enter__(self):
-        try:
-            self.widget.disconnect_by_func(
-                self.handler
-            )
-            self.was_connected = True
-        except TypeError:
-            self.was_connected = False
+        for widget in self.widgets:
+            widget.handler_block_by_func(self.handler)
 
     def __exit__(self, *_):
-        if self.was_connected:
-            self.widget.connect(
-                self.event, self.handler
-            )
+        for widget in self.widgets:
+            widget.handler_unblock_by_func(self.handler)
 
 
 class InputRow:
@@ -254,6 +246,8 @@ class ALSAControlWindow:
 
         self.check_pulse()
 
+        self.populate_advanced_settings()
+
         GLib.timeout_add(500, self.refresh_cards)
         GLib.timeout_add(500, self.refresh_toggle_daemon_text)
 
@@ -372,17 +366,74 @@ class ALSAControlWindow:
         return True
 
     def get_toggle_daemon_text(self, running):
+        """Get the toggle button text depending on the daemon state."""
         if running:
             return 'Stop Daemon'
         else:
             return 'Start Daemon'
+
+    def populate_advanced_settings(self):
+        """Display the current configuration in the Advanced tab."""
+        use_dmix = self.builder.get_object('use_dmix')
+        use_output_softvol = self.builder.get_object('use_output_softvol')
+        num_output_channels = self.builder.get_object('num_output_channels')
+        use_dsnoop = self.builder.get_object('use_dsnoop')
+        use_input_softvol = self.builder.get_object('use_input_softvol')
+        with HandlerDisabled([
+            use_dmix,
+            use_output_softvol,
+            num_output_channels,
+            use_dsnoop,
+            use_input_softvol
+        ], self.update_config):
+            config = get_config()
+            use_dmix.set_active(
+                config.get('output_use_dmix')
+            )
+            use_output_softvol.set_active(
+                config.get('output_use_softvol')
+            )
+            num_output_channels.set_value(
+                config.get('output_channels')
+            )
+            use_dsnoop.set_active(
+                config.get('input_use_dsnoop')
+            )
+            use_input_softvol.set_active(
+                config.get('input_use_softvol')
+            )
+
+    def update_config(self, _):
+        """Update all config values based on the advanced configuration."""
+        print('update_config')
+        config = get_config()
+        config.set(
+            'output_use_dmix',
+            self.builder.get_object('use_dmix').get_active()
+        )
+        config.set(
+            'output_use_softvol',
+            self.builder.get_object('use_output_softvol').get_active()
+        )
+        config.set(
+            'output_channels',
+            int(self.builder.get_object('num_output_channels').get_value())
+        )
+        config.set(
+            'input_use_dsnoop',
+            self.builder.get_object('use_dsnoop').get_active()
+        )
+        config.set(
+            'input_use_softvol',
+            self.builder.get_object('use_input_softvol').get_active()
+        )
 
     """Output"""
 
     def dropdown_handlers_disabled(self):
         """Safely modify dropdown contents."""
         return HandlerDisabled(
-            self.card_selection, 'changed', self.on_output_card_selected
+            [self.card_selection], self.on_output_card_selected
         )
 
     def select_current_output(self):

@@ -383,7 +383,9 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
+                    <property name="halign">start</property>
                     <property name="draw_indicator">True</property>
+                    <signal name="toggled" handler="update_config" swapped="no"/>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -396,7 +398,9 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
+                    <property name="halign">start</property>
                     <property name="draw_indicator">True</property>
+                    <signal name="toggled" handler="update_config" swapped="no"/>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -425,7 +429,8 @@
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="adjustment">num_channels_adjustment</property>
-                        <signal name="value-changed" handler="on_num_output_channels_value_changed" swapped="no"/>
+                        <property name="numeric">True</property>
+                        <signal name="value-changed" handler="update_config" swapped="no"/>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -457,7 +462,9 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
+                    <property name="halign">start</property>
                     <property name="draw_indicator">True</property>
+                    <signal name="toggled" handler="update_config" swapped="no"/>
                   </object>
                   <packing>
                     <property name="left_attach">1</property>
@@ -470,7 +477,9 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
+                    <property name="halign">start</property>
                     <property name="draw_indicator">True</property>
+                    <signal name="toggled" handler="update_config" swapped="no"/>
                   </object>
                   <packing>
                     <property name="left_attach">1</property>
@@ -577,7 +586,6 @@ Please report bugs at &lt;a href="https://github.com/sezanzeb/ALSA-Control/issue
   </object>
   <object class="GtkDialog" id="pulse_dialog">
     <property name="width_request">300</property>
-    <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="border_width">5</property>
     <property name="resizable">False</property>
@@ -631,7 +639,6 @@ Please report bugs at &lt;a href="https://github.com/sezanzeb/ALSA-Control/issue
           <object class="GtkLabel" id="pulse_dialog_text">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="label" translatable="yes">mmmmm mmmmm mmmmm mmmmm mmmmm mmmmm mmmmm mmmmm mmmmm mmmmm mmmmm mmmmm mmmmm mmmmm </property>
             <property name="wrap">True</property>
             <property name="max_width_chars">30</property>
             <property name="xalign">0</property>

@@ -88,7 +88,7 @@ def should_use_dmix(pcm_output):
     # use dmix only for hardware devices,
     # if the config is on and if the plugin is hw
     hardware_device = 'CARD=' in pcm_output
-    output_use_dmix = get_config().get('output_use_dmix', True)
+    output_use_dmix = get_config().get('output_use_dmix')
     output_plugin_hw = pcm_output.startswith('hw:')
     return hardware_device and output_use_dmix and output_plugin_hw
 
@@ -96,7 +96,7 @@ def should_use_dmix(pcm_output):
 def should_use_dsnoop(pcm_input):
     """Check if, according to config, dsnoop should and can be used."""
     hardware_device = 'CARD=' in pcm_input
-    input_use_dmix = get_config().get('input_use_dsnoop', True)
+    input_use_dmix = get_config().get('input_use_dsnoop')
     input_plugin_hw = pcm_input.startswith('hw:')
     return hardware_device and input_use_dmix and input_plugin_hw
 
@@ -112,7 +112,7 @@ def create_asoundrc():
     else:
         last_output_step = pcm_output
     # either from asym directly to the last step, or over softvol
-    if get_config().get('output_use_softvol', True):
+    if get_config().get('output_use_softvol'):
         output_pcm_asym = 'alsacontrol-output-softvol'
         output_pcm_softvol = last_output_step
     else:
@@ -126,7 +126,7 @@ def create_asoundrc():
     else:
         last_input_step = pcm_input
     # either from asym directly to the last step, or over softvol
-    if get_config().get('input_use_softvol', True):
+    if get_config().get('input_use_softvol'):
         input_pcm_asym = 'alsacontrol-output-softvol'
         input_pcm_softvol = last_input_step
     else:
@@ -138,7 +138,7 @@ def create_asoundrc():
         'output_pcm_asym': output_pcm_asym,
         'output_pcm_softvol': output_pcm_softvol,
         'output_pcm': pcm_output,
-        'output_channels': get_config().get('output_channels', 2),
+        'output_channels': get_config().get('output_channels'),
 
         'input_pcm_asym': input_pcm_asym,
         'input_pcm_softvol': input_pcm_softvol,

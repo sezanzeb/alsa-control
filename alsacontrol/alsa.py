@@ -168,7 +168,8 @@ def get_volume(pcm, nonlinear=False):
 
     if mixer_name not in alsaaudio.mixers():
         logger.error('Could not find mixer %s', mixer_name)
-        raise ValueError(f'Could not find mixer {mixer_name}')
+        # might be due to configuration
+        return 100
 
     mixer = alsaaudio.Mixer(mixer_name)
     mixer_volume = mixer.getvolume(pcm)[0] / 100

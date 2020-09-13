@@ -41,7 +41,7 @@ class SpeakerTest:
         Returns the subprocess or False if it has been stopped.
         """
         if self.speaker_test_process is None:
-            num_channels = get_config().get('num_output_channels', 2)
+            num_channels = get_config().get('num_output_channels')
             cmd = f'speaker-test -D default -c {num_channels} -twav'.split()
             logger.info('Testing speakers, %d channels', num_channels)
             process = subprocess.Popen(
