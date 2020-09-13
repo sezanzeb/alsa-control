@@ -122,6 +122,11 @@ class Config:
                         value = None
                 if value.isdigit():
                     value = int(value)
+                else:
+                    try:
+                        value = float(value)
+                    except ValueError:
+                        pass
                 if value == 'True':
                     value = True
                 if value == 'False':
@@ -165,6 +170,8 @@ class Config:
             if not config_contents.endswith('\n'):
                 config_contents += '\n'
             config_file.write(config_contents)
+
+        self.mtime = os.path.getmtime(self._path)
         return True
 
 

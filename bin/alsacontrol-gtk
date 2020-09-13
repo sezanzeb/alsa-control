@@ -402,7 +402,7 @@ class ALSAControlWindow:
         config = get_config()
         config.set('output_use_dmix', use_dmix.get_active())
         config.set('output_use_softvol', use_output_softvol.get_active())
-        config.set('output_channels', num_output_channels.get_value())
+        config.set('output_channels', int(num_output_channels.get_value()))
         config.set('input_use_dsnoop', use_dsnoop.get_active())
         config.set('input_use_softvol', use_input_softvol.get_active())
 
