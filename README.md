@@ -66,7 +66,7 @@ Basically provide everything that is needed to comfortably use ALSA without puls
 
 ## Jack
 
-Changing jacks volume via softvol doesn't feel responsive. Firefox seems to prefer
+With jack as output the volume can be changed with softvol as well. Firefox seems to prefer
 talking to jack directly over using the default device provided by the generated asoundrc, so the
 volume change doesn't affect it. Before starting jack, the ALSA-Control GUI needs to be closed because
 jack can't acquire the input device as long as the level is monitored.
