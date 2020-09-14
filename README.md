@@ -5,11 +5,11 @@ it is not necessary to run pulseaudio for that. This software provides multiplex
 .asoundrc default configurations, while the GUI may work as a replacement for pavucontrol.
 
 Not having pulseaudio is not compatible with everything. For example, Discord in Firefox and Terraria were silent without Pulseaudio.
-Maybe https://github.com/i-rinat/apulse helps.
+Maybe [apulse](https://github.com/i-rinat/apulse) helps.
 
 ## Usage
 
-Get it from https://aur.archlinux.org/packages/alsa-control/ or run:
+Install [alsa-control from the AUR](https://aur.archlinux.org/packages/alsa-control/) or run:
 
 ```
 pip3 install pyalsaaudio
