@@ -43,6 +43,8 @@ alsacontrol -m
     <img src="data/notifications.png"/>
 </p>
 
+Running pulseaudio at the same time causes problems at least for me.
+
 
 ## Features
 
