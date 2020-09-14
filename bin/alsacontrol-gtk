@@ -227,7 +227,8 @@ class ALSAControlWindow:
             'output_card_selection'
         )
 
-        self.initialize_volume_slider()
+        self.initialize_input_volume_slider()
+        self.initialize_output_volume_slider()
         self.populate_output_cards_dropdown()
         self.populate_input_pcms()
         self.select_current_output()
@@ -270,18 +271,17 @@ class ALSAControlWindow:
         self.builder.get_object('pulse_dialog').hide()
 
     @only_with_existing_output
-    @only_with_existing_input
     def volume_changed_externally(self):
-        """When the volume was changed by `alsacontrol`."""
-        self.initialize_volume_slider()
+        """Refresh the output tab when `alsacontrol` modifies the volume.
+
+        Since alsacontrol only modifies the output volume currently,
+        this only modifies the output slider.
+        """
+        self.initialize_output_volume_slider()
 
         output_volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True)
         output_muted = is_muted(OUTPUT_MUTE)
         self.refresh_icon_state('output', output_volume, output_muted)
-
-        input_volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True)
-        input_muted = is_muted(INPUT_MUTE)
-        self.refresh_icon_state('input', input_volume, input_muted)
 
     def on_close(self, *_):
         """Safely close the application."""
@@ -297,15 +297,17 @@ class ALSAControlWindow:
         return True
 
     @only_with_existing_output
-    @only_with_existing_input
-    def initialize_volume_slider(self):
-        """Reflect the current volume and mute state on each tab."""
+    def initialize_output_volume_slider(self):
+        """Reflect the current volume and mute state in the output tab."""
         output_slider = self.builder.get_object('output_volume_slider_scale')
         output_volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True) or 0
         output_slider.set_value(output_volume)
         output_muted = is_muted(OUTPUT_MUTE)
         self.refresh_icon_state('output', output_volume, output_muted)
 
+    @only_with_existing_input
+    def initialize_input_volume_slider(self):
+        """Reflect the current volume and mute state in the input tab."""
         input_slider = self.builder.get_object('input_volume_slider_scale')
         input_volume = get_volume(alsaaudio.PCM_CAPTURE, nonlinear=True) or 0
         input_slider.set_value(input_volume)
