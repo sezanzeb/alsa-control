@@ -9,6 +9,8 @@ Maybe https://github.com/i-rinat/apulse helps.
 
 ## Usage
 
+Get it from https://aur.archlinux.org/packages/alsa-control/ or run:
+
 ```
 pip3 install pyalsaaudio
 python3 setup.py install
