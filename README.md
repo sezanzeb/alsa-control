@@ -54,7 +54,6 @@ Basically provide everything that is needed to comfortably use ALSA without puls
 - [x] Show a volume meter as notification on volume changes or mute toggling
 - [x] Change the volume of soundcards without Master controls with softvol
 - [x] Generate an asoundrc file that is automatically included in ~/.asoundrc based on config
-- [x] Add GTK GUI
 - [x] Control volumes with sliders and a mute button
 - [x] Always show up to date devices in the GUI
 - [x] Add a button to test the speaker setup
@@ -65,7 +64,8 @@ Basically provide everything that is needed to comfortably use ALSA without puls
 - [x] Startmenu .desktop entry
 - [x] Start the daemon on login
 - [x] Make dmix, softvol, dsnoop, channels and samplerate configurable
-- [ ] Provide .deb files and get it into the AUR
+- [x] Get it into the AUR
+- [ ] Provide .deb files
 
 ## Jack
 
