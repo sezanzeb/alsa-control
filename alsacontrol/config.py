@@ -83,6 +83,7 @@ class Config:
     def __init__(self):
         self._path = os.path.expanduser('~/.config/alsacontrol/config')
         self._config = {}
+        self.mtime = 0
 
         # create an empty config if it doesn't exist
         if not os.path.exists(os.path.dirname(self._path)):
@@ -90,17 +91,7 @@ class Config:
         if not os.path.exists(self._path):
             logger.info('Creating config file "%s"', self._path)
             os.mknod(self._path)
-            # add all default values
-            # input
-            self.set('pcm_input', 'null')
-            self.set('input_use_softvol', True)
-            self.set('input_use_dsnoop', True)
-            # output
-            self.set('pcm_output', 'null')
-            self.set('output_use_softvol', True)
-            self.set('output_use_dmix', True)
 
-        self.mtime = 0
         self.load_config()
 
     def load_config(self):
