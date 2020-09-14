@@ -16,6 +16,8 @@ pip3 install pyalsaaudio
 python3 setup.py install
 ```
 
+It should create an entry in your applications menu. But you can also start it from the console:
+
 ```
 alsacontrol-gtk
 ```
@@ -27,7 +29,7 @@ alsacontrol-gtk
     <img src="data/advanced.png"/>
 </p>
 
-If it didn't already start due to a system restart, you can start the daemon with:
+If the daemon didn't already start due to a system restart, you can start it either from the user interface, or with:
 
 ```
 alsacontrol-daemon-gtk
