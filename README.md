@@ -35,7 +35,7 @@ If the daemon didn't already start due to a system restart, you can start it eit
 alsacontrol-daemon-gtk
 ```
 
-Now try to change the volume. For convenience, bind this to your multimedia keys in your user interface
+Now try to change the volume with the following commands. For convenience, bind this to your multimedia keys in your user interface.
 
 ```
 alsacontrol -v +5
