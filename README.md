@@ -43,8 +43,7 @@ alsacontrol -m
     <img src="data/notifications.png"/>
 </p>
 
-Running pulseaudio at the same time causes problems at least for me.
-
+Running pulseaudio at the same time may cause problems. Keyboard shortcuts may break if you have the xfce pulseaudio plugin active.
 
 ## Features
 
