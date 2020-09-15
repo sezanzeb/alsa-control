@@ -1,8 +1,8 @@
 # ALSA Control
 
 Since ALSA provides dmix for soundcards that don't support multiplexing and softvol for those that can't control their volume,
-it is not necessary to run pulseaudio for that. This software provides multiplexing, volume and muting capabilities by creating
-.asoundrc default configurations, while the GUI may work as a replacement for pavucontrol.
+it is not necessary to run pulseaudio for that. This application creates .asoundrc default configurations for this purpose,
+while the GUI may work as a replacement for pavucontrol.
 
 Not having pulseaudio is not compatible with everything. For example, Discord in Firefox and Terraria were silent without Pulseaudio.
 Maybe [apulse](https://github.com/i-rinat/apulse) helps.
