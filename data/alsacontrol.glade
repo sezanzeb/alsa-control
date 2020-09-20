@@ -221,6 +221,7 @@
                   <object class="GtkLabel" id="input_card_name">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="use_markup">True</property>
                     <property name="xalign">0</property>
                   </object>
                   <packing>
@@ -383,6 +384,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
+                    <property name="tooltip_text" translatable="yes">Enables the simultaneous sound output of multiple applications</property>
                     <property name="halign">start</property>
                     <property name="draw_indicator">True</property>
                     <signal name="toggled" handler="update_config" swapped="no"/>
@@ -398,6 +400,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
+                    <property name="tooltip_text" translatable="yes">Control the volume via ALSA-Controls mixer</property>
                     <property name="halign">start</property>
                     <property name="draw_indicator">True</property>
                     <signal name="toggled" handler="update_config" swapped="no"/>
@@ -462,6 +465,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
+                    <property name="tooltip_text" translatable="yes">Enables the simultaneous sound input to multiple applications</property>
                     <property name="halign">start</property>
                     <property name="draw_indicator">True</property>
                     <signal name="toggled" handler="update_config" swapped="no"/>
@@ -477,6 +481,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
+                    <property name="tooltip_text" translatable="yes">Control the volume via ALSA-Controls mixer</property>
                     <property name="halign">start</property>
                     <property name="draw_indicator">True</property>
                     <signal name="toggled" handler="update_config" swapped="no"/>
