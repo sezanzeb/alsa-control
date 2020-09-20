@@ -192,7 +192,13 @@ class InputLevel:
         if self.stopped:
             return False
 
-        new_level = get_level(self.pcm)
+        try:
+            new_level = get_level(self.pcm)
+        except alsaaudio.ALSAAudioError:
+            logger.error('Could not monitor the level of "%s"', self.card)
+            self.valid = False
+            return False
+
         if new_level is None:
             # try again
             return True
@@ -532,18 +538,14 @@ class ALSAControlWindow:
                 )
                 self.input_rows.append(input_row)
 
+        self.display_input()
+
     def select_input_card(self, card):
-        """Select a card as input source."""
+        """Select a card as input source in UI and asoundrc."""
         if not input_exists('select_input_card'):
             record_to_nowhere()
 
-        label = self.builder.get_object('input_card_name')
-        label.set_label(card)
-        for input_row in self.input_rows:
-            if input_row.card != card:
-                input_row.set_active(0)
-            else:
-                input_row.set_active(1)
+        self.display_input(card)
 
         select_input_pcm(card)
         setup_asoundrc()
@@ -571,10 +573,44 @@ class ALSAControlWindow:
         self.input_levels = []
 
     def select_current_input(self):
-        """Select the configured input."""
+        """Show the configured input in the UI and configure asoundrc."""
         card = get_current_card('pcm_input')[1]
         if card is not None:
             self.select_input_card(card)
+
+    def display_input(self, card=None):
+        """Show the name of the input card and tick its checkbox if available.
+
+        If it is not found in the system, will grey the name out.
+
+        Parameters
+        ----------
+        card : string
+            If None, will show the current output, but it won't modify
+            asoundrc unlike select_current_input in that case.
+        """
+        if card is None:
+            card = get_current_card('pcm_input')[1]
+
+        label = self.builder.get_object('input_card_name')
+
+        if card is None:
+            label.set_label('')
+            return
+
+        for input_row in self.input_rows:
+            if input_row.card != card:
+                input_row.set_active(0)
+            else:
+                input_row.set_active(1)
+
+        cards = get_cards()
+        if card in cards:
+            label.set_label(card)
+        else:
+            label.set_label(
+                f'<span alpha="50%"><i>{card} (not found)</i></span>'
+            )
 
 
 if __name__ == '__main__':

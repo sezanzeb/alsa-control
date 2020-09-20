@@ -117,8 +117,8 @@ def get_current_card(source):
 
     Returns
     -------
-    A tuple of (d, card) with d being the index in
-    the list of options from get_cards.
+    A tuple of (d, card) with d being the index in the list of options
+    from get_cards.
     """
     pcm_name = get_config().get(source)
     if pcm_name == 'null':
@@ -133,7 +133,7 @@ def get_current_card(source):
     card = get_card(pcm_name)
     if card not in cards:
         logger.warning('Found unknown %s "%s" in config', source, pcm_name)
-        return None, None
+        return None, card
 
     index = cards.index(card)
     return index, card
@@ -167,6 +167,8 @@ def select_output_pcm(card):
     """
     # figure out if this is an actual hardware device or not
     cards = alsaaudio.cards()
+    if card is None:
+        card = 'null'
     if card in cards:
         plugin = get_config().get('output_plugin')
         pcm_name = f'{plugin}:CARD={card}'
@@ -185,6 +187,8 @@ def select_input_pcm(card):
     """
     # figure out if this is an actual hardware device or not
     cards = alsaaudio.cards()
+    if card is None:
+        card = 'null'
     if card in cards:
         plugin = get_config().get('input_plugin')
         pcm_name = f'{plugin}:CARD={card}'

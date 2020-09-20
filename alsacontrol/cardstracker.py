@@ -41,11 +41,11 @@ class CardsTracker:
             # first time running, don't log yet
             pass
         else:
-            for pcm in self.cards.difference(cards):
-                logger.info('PCM %s was removed', pcm)
+            for card in self.cards.difference(cards):
+                logger.info('Card "%s" was removed', card)
                 changes += 1
-            for pcm in cards.difference(self.cards):
-                logger.info('Found new PCM %s', pcm)
+            for card in cards.difference(self.cards):
+                logger.info('Found new card "%s"', card)
                 changes += 1
         self.cards = cards
         return changes > 0
