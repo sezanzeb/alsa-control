@@ -1,18 +1,22 @@
 # ALSA Control
 
 Since ALSA provides dmix for soundcards that don't support multiplexing and softvol for those that can't control their volume,
-it is not necessary to run pulseaudio for that. This software provides multiplexing, volume and muting capabilities by creating
-.asoundrc default configurations, while the GUI may work as a replacement for pavucontrol.
+it is not necessary to run pulseaudio for that. This application creates .asoundrc default configurations for this purpose,
+while the GUI may work as a replacement for pavucontrol.
 
 Not having pulseaudio is not compatible with everything. For example, Discord in Firefox and Terraria were silent without Pulseaudio.
-Maybe https://github.com/i-rinat/apulse helps.
+Maybe [apulse](https://github.com/i-rinat/apulse) helps.
 
 ## Usage
+
+Install [alsa-control from the AUR](https://aur.archlinux.org/packages/alsa-control/) or run:
 
 ```
 pip3 install pyalsaaudio
 python3 setup.py install
 ```
+
+It should create an entry in your applications menu. But you can also start it from the console:
 
 ```
 alsacontrol-gtk
@@ -25,13 +29,13 @@ alsacontrol-gtk
     <img src="data/advanced.png"/>
 </p>
 
-If it didn't already start due to a system restart, you can start the daemon with:
+If the daemon didn't already start due to a system restart, you can start it either from the user interface, or with:
 
 ```
 alsacontrol-daemon-gtk
 ```
 
-Now try to change the volume. For convenience, bind this to your multimedia keys in your user interface
+Now try to change the volume with the following commands. For convenience, bind this to your multimedia keys in your user interface.
 
 ```
 alsacontrol -v +5
@@ -52,7 +56,6 @@ Basically provide everything that is needed to comfortably use ALSA without puls
 - [x] Show a volume meter as notification on volume changes or mute toggling
 - [x] Change the volume of soundcards without Master controls with softvol
 - [x] Generate an asoundrc file that is automatically included in ~/.asoundrc based on config
-- [x] Add GTK GUI
 - [x] Control volumes with sliders and a mute button
 - [x] Always show up to date devices in the GUI
 - [x] Add a button to test the speaker setup
@@ -63,7 +66,9 @@ Basically provide everything that is needed to comfortably use ALSA without puls
 - [x] Startmenu .desktop entry
 - [x] Start the daemon on login
 - [x] Make dmix, softvol, dsnoop, channels and samplerate configurable
-- [ ] Provide .deb files and get it into the AUR
+- [x] Get it into the AUR
+- [ ] Write specs for the UI (using stubs for pyalsaaudio)
+- [ ] Provide .deb files
 
 ## Jack
 
