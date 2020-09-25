@@ -88,7 +88,13 @@ def get_card(pcm):
         card = pcm.split(':CARD=')[1].split(',')[0]
         return card
     # unsupported card
-    return None
+    logger.warning(
+        'Encountered unsupported non-hw pcm "%s". Did you mean to set '
+        'the config to "hw:CARD=%s"?',
+        pcm,
+        pcm
+    )
+    return pcm
 
 
 def get_cards():
@@ -120,6 +126,7 @@ def get_current_card(source):
     A tuple of (d, card) with d being the index in the list of options
     from get_cards.
     """
+    print('get_current_card')
     pcm_name = get_config().get(source)
     if pcm_name == 'null':
         logger.warning('No input selected')
@@ -133,6 +140,7 @@ def get_current_card(source):
     card = get_card(pcm_name)
     if card not in cards:
         logger.warning('Found unknown %s "%s" in config', source, pcm_name)
+        print('a', card)
         return None, card
 
     index = cards.index(card)

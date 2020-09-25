@@ -427,7 +427,7 @@ class ALSAControlWindow:
         """Select the configured values for both dropdowns."""
         with self.dropdown_handlers_disabled():
             index, card = get_current_card('pcm_output')
-            if card is not None:
+            if index is not None:
                 card_selection = self.card_selection
                 if card_selection.get_active() != index:
                     card_selection.set_active(index)
@@ -441,7 +441,7 @@ class ALSAControlWindow:
                 self.card_selection.append(card, card)
             # since all cards have been removed, restore the selection
             index, card = get_current_card('pcm_output')
-            if card is not None:
+            if index is not None:
                 self.card_selection.set_active(index)
 
     def on_output_card_selected(self, card_dropdown):
@@ -589,8 +589,11 @@ class ALSAControlWindow:
             If None, will show the current output, but it won't modify
             asoundrc unlike select_current_input in that case.
         """
+        print('display_input')
         if card is None:
+            print('display_input card is none')
             card = get_current_card('pcm_input')[1]
+        print('display_input', card)
 
         label = self.builder.get_object('input_card_name')
 
@@ -605,6 +608,7 @@ class ALSAControlWindow:
                 input_row.set_active(1)
 
         cards = get_cards()
+        print('display_input', card, cards)
         if card in cards:
             label.set_label(card)
         else:
