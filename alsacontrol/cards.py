@@ -126,7 +126,6 @@ def get_current_card(source):
     A tuple of (d, card) with d being the index in the list of options
     from get_cards.
     """
-    print('get_current_card')
     pcm_name = get_config().get(source)
     if pcm_name == 'null':
         logger.warning('No input selected')
@@ -140,7 +139,6 @@ def get_current_card(source):
     card = get_card(pcm_name)
     if card not in cards:
         logger.warning('Found unknown %s "%s" in config', source, pcm_name)
-        print('a', card)
         return None, card
 
     index = cards.index(card)
@@ -186,7 +184,7 @@ def select_output_pcm(card):
 
 
 def select_input_pcm(card):
-    """Write this pcm to the configuration.
+    """Write the pcm to the configuration.
 
     Parameters
     ----------
@@ -194,12 +192,20 @@ def select_input_pcm(card):
         "Generic", "jack", ...
     """
     # figure out if this is an actual hardware device or not
-    cards = alsaaudio.cards()
     if card is None:
-        card = 'null'
-    if card in cards:
+        return
+    cards = alsaaudio.cards()
+    if card == 'jack':
+        pcm_name = 'jack'
+    elif card in cards:
         plugin = get_config().get('input_plugin')
         pcm_name = f'{plugin}:CARD={card}'
     else:
-        pcm_name = card  # otherwise probably jack
+        # card unknown, the device is possibly not connected
+        logger.warning(
+            'Going to write possibly invalid pcm %s to the settings',
+            card
+        )
+        # might me something similar to jack, a software pcm
+        pcm_name = card
     get_config().set('pcm_input', pcm_name)

@@ -23,6 +23,8 @@
 
 
 import os
+import traceback
+import sys
 
 from alsacontrol.logger import logger
 
@@ -56,6 +58,7 @@ def _modify_config(config_contents, key, value):
         Value to write
     """
     logger.info('Setting "%s" to "%s"', key, value)
+
     split = config_contents.split('\n')
     if split[-1] == '':
         split = split[:-1]

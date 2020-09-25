@@ -44,14 +44,17 @@ def add_include():
     dot_asoundrc_path = os.path.expanduser('~/.asoundrc')
     if os.path.exists(dot_asoundrc_path):
         with open(dot_asoundrc_path, 'r') as file:
-            contents = file.read()
+            contents = file.readlines()
     else:
-        contents = ''
+        contents = []
 
     with open(dot_asoundrc_path, 'a') as file:
         include = f'<{alsactl_asoundrc}>'
-        if include not in contents:
-            file.write(include)
+        for line in contents:
+            if line.startswith(include):
+                return
+        file.write(include)
+        file.write('\n')
 
 
 def check_asoundrc():

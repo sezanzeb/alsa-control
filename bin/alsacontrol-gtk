@@ -547,8 +547,9 @@ class ALSAControlWindow:
 
         self.display_input(card)
 
-        select_input_pcm(card)
-        setup_asoundrc()
+        if input_exists('select_input_card'):
+            select_input_pcm(card)
+            setup_asoundrc()
 
     @only_with_existing_input
     def on_input_volume_change(self, gtk_range):
@@ -589,11 +590,8 @@ class ALSAControlWindow:
             If None, will show the current output, but it won't modify
             asoundrc unlike select_current_input in that case.
         """
-        print('display_input')
         if card is None:
-            print('display_input card is none')
             card = get_current_card('pcm_input')[1]
-        print('display_input', card)
 
         label = self.builder.get_object('input_card_name')
 
@@ -608,7 +606,6 @@ class ALSAControlWindow:
                 input_row.set_active(1)
 
         cards = get_cards()
-        print('display_input', card, cards)
         if card in cards:
             label.set_label(card)
         else:
