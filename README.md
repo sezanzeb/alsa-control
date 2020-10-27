@@ -9,6 +9,14 @@ Maybe [apulse](https://github.com/i-rinat/apulse) helps.
 
 If you encounter problems, don't hesitate to open an issue in this repo!
 
+## Jack
+
+You can use this to control the volume while running jack. Firefox seems to prefer talking to
+jack directly over using the default device provided by the generated asoundrc though, so the
+volume change doesn't affect it. Before starting jack, the ALSA-Control GUI needs to be closed because
+jack can't acquire the input device as long as the level is monitored, or you select "none" as input
+in Cadence.
+
 ## Usage
 
 Install [alsa-control from the AUR](https://aur.archlinux.org/packages/alsa-control/) or run:
@@ -37,7 +45,8 @@ If the daemon didn't already start due to a system restart, you can start it eit
 alsacontrol-daemon-gtk
 ```
 
-Now try to change the volume with the following commands. For convenience, bind this to your multimedia keys in your user interface.
+While the above command runs in a separate terminal, try to change the volume with the following commands.
+For convenience, bind this to your multimedia keys in your user interface.
 
 ```
 alsacontrol -v +5
@@ -71,14 +80,6 @@ Basically provide everything that is needed to comfortably use ALSA without puls
 - [x] Get it into the AUR
 - [ ] Write specs for the UI (using stubs for pyalsaaudio)
 - [ ] Provide .deb files
-
-## Jack
-
-With jack as output the volume can be changed with softvol as well. Firefox seems to prefer
-talking to jack directly over using the default device provided by the generated asoundrc, so the
-volume change doesn't affect it. Before starting jack, the ALSA-Control GUI needs to be closed because
-jack can't acquire the input device as long as the level is monitored. Or you select "none" as input
-in Cadence.
 
 ## Testing
 
