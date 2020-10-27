@@ -51,6 +51,9 @@ from alsacontrol.speakertest import SpeakerTest
 from alsacontrol.config import get_config
 
 
+window = None
+
+
 class HandlerDisabled:
     """Safely modify a widget without causing handlers to be called.
 
@@ -528,7 +531,7 @@ class ALSAControlWindow:
         for card in cards:
             # for each possible output, construct an InputRow, which also
             # figures out if the card is usable as input.
-            input_row = InputRow(card, self.select_input_card)
+            input_row = InputRow(card, self.on_input_card_selected)
             if input_row.is_valid():
                 # If it can be used, register it so that it
                 # can be manipulated
@@ -537,19 +540,23 @@ class ALSAControlWindow:
                     expand=False, fill=False, padding=10
                 )
                 self.input_rows.append(input_row)
+            continue
 
         self.display_input()
 
-    def select_input_card(self, card):
+    def on_input_card_selected(self, card):
         """Select a card as input source in UI and asoundrc."""
-        if not input_exists('select_input_card'):
+        if card == get_current_card('pcm_input')[1]:
+            # the currently selected card was ticked, disable the output
+            # instead
+            card = None
+
+        select_input_pcm(card)
+        setup_asoundrc()
+        self.display_input()
+
+        if not input_exists('on_input_card_selected'):
             record_to_nowhere()
-
-        self.display_input(card)
-
-        if input_exists('select_input_card'):
-            select_input_pcm(card)
-            setup_asoundrc()
 
     @only_with_existing_input
     def on_input_volume_change(self, gtk_range):
@@ -575,28 +582,25 @@ class ALSAControlWindow:
 
     def select_current_input(self):
         """Show the configured input in the UI and configure asoundrc."""
-        card = get_current_card('pcm_input')[1]
-        if card is not None:
-            self.select_input_card(card)
+        setup_asoundrc()
+        self.display_input()
 
-    def display_input(self, card=None):
-        """Show the name of the input card and tick its checkbox if available.
+        if not input_exists('on_input_card_selected'):
+            record_to_nowhere()
+
+    def display_input(self):
+        """Show the current input and tick its checkbox if available.
 
         If it is not found in the system, will grey the name out.
-
-        Parameters
-        ----------
-        card : string
-            If None, will show the current output, but it won't modify
-            asoundrc unlike select_current_input in that case.
         """
-        if card is None:
-            card = get_current_card('pcm_input')[1]
+        card = get_current_card('pcm_input')[1]
 
         label = self.builder.get_object('input_card_name')
 
         if card is None:
-            label.set_label('')
+            label.set_label(
+                f'<span alpha="50%"><i>No card selected</i></span>'
+            )
             return
 
         for input_row in self.input_rows:
@@ -626,6 +630,7 @@ if __name__ == '__main__':
 
     options = parser.parse_args(sys.argv[1:])
     update_verbosity(options.debug)
+
     log_info()
     setup_asoundrc()
 
@@ -633,5 +638,5 @@ if __name__ == '__main__':
     output_exists('GUI main')
     input_exists('GUI main')
 
-    ALSAControlWindow()
+    window = ALSAControlWindow()
     Gtk.main()

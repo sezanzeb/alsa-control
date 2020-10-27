@@ -22,11 +22,25 @@
 """Sets up ALSA-Control for the tests and runs them."""
 
 
+import os
 import sys
 import unittest
 
+from alsacontrol.config import get_config
+from alsacontrol.logger import update_verbosity
+
 
 if __name__ == "__main__":
+    update_verbosity(debug=True)
+
+    config_path = '/tmp/alsacontrol-test-config'
+
+    if os.path.exists(config_path):
+        os.remove(config_path)
+
+    # don't overwrite the users settings in unittests
+    get_config(config_path)
+
     modules = sys.argv[1:]
     # discoverer is really convenient, but it can't find a specific test
     # in all of the available tests like unittest.main() does...,

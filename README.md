@@ -7,6 +7,8 @@ while the GUI may work as a replacement for pavucontrol.
 Not having pulseaudio is not compatible with everything. For example, Discord in Firefox and Terraria were silent without Pulseaudio.
 Maybe [apulse](https://github.com/i-rinat/apulse) helps.
 
+If you encounter problems, don't hesitate to open an issue in this repo!
+
 ## Usage
 
 Install [alsa-control from the AUR](https://aur.archlinux.org/packages/alsa-control/) or run:
@@ -75,7 +77,8 @@ Basically provide everything that is needed to comfortably use ALSA without puls
 With jack as output the volume can be changed with softvol as well. Firefox seems to prefer
 talking to jack directly over using the default device provided by the generated asoundrc, so the
 volume change doesn't affect it. Before starting jack, the ALSA-Control GUI needs to be closed because
-jack can't acquire the input device as long as the level is monitored.
+jack can't acquire the input device as long as the level is monitored. Or you select "none" as input
+in Cadence.
 
 ## Testing
 

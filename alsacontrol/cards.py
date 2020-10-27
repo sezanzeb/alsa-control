@@ -34,9 +34,13 @@ def input_exists(func, testcard=True, testmixer=True):
     """Check if the configured input card and mixer is available."""
     # might be a pcm name with plugin and device
     card = get_card(get_config().get('pcm_input'))
-    if testcard and not card in alsaaudio.cards():
-        logger.error('%s, Could not find the input card "%s"', func, card)
-        return False
+    if testcard:
+        if card is None:
+            logger.debug('%s, No input selected', func)
+            return False
+        if not card in alsaaudio.cards():
+            logger.error('%s, Could not find the input card "%s"', func, card)
+            return False
     if testmixer and get_config().get('input_use_softvol'):
         if 'alsacontrol-input-volume' not in alsaaudio.mixers():
             logger.error('%s, Could not find the input softvol mixer', func)
@@ -87,6 +91,9 @@ def get_card(pcm):
     if ':CARD=' in pcm:
         card = pcm.split(':CARD=')[1].split(',')[0]
         return card
+    if pcm == 'null':
+        return None
+
     # unsupported card
     logger.warning(
         'Encountered unsupported non-hw pcm "%s". Did you mean to set '
@@ -128,7 +135,7 @@ def get_current_card(source):
     """
     pcm_name = get_config().get(source)
     if pcm_name == 'null':
-        logger.warning('No input selected')
+        logger.debug('No input selected')
         return None, None
 
     cards = get_cards()
@@ -193,7 +200,10 @@ def select_input_pcm(card):
     """
     # figure out if this is an actual hardware device or not
     if card is None:
+        logger.debug('Unselecting the input')
+        get_config().set('pcm_input', 'null')
         return
+
     cards = alsaaudio.cards()
     if card == 'jack':
         pcm_name = 'jack'
@@ -208,4 +218,5 @@ def select_input_pcm(card):
         )
         # might me something similar to jack, a software pcm
         pcm_name = card
+
     get_config().set('pcm_input', pcm_name)

@@ -42,10 +42,10 @@ class SpeakerTest:
         """
         if self.speaker_test_process is None:
             num_channels = get_config().get('output_channels')
-            cmd = f'speaker-test -D default -c {num_channels} -twav'.split()
-            logger.info('Testing speakers, %d channels', num_channels)
+            cmd = f'speaker-test -D default -c {num_channels} -twav'
+            logger.info('Testing speakers, %d channels (%s)', num_channels, cmd)
             process = subprocess.Popen(
-                cmd,
+                cmd.split(),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 preexec_fn=os.setsid

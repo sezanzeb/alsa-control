@@ -23,8 +23,6 @@
 
 
 import os
-import traceback
-import sys
 
 from alsacontrol.logger import logger
 
@@ -83,8 +81,19 @@ def _modify_config(config_contents, key, value):
 
 class Config:
     """Read and set config values."""
-    def __init__(self):
-        self._path = os.path.expanduser('~/.config/alsacontrol/config')
+    def __init__(self, path=None):
+        """Initialize the interface to the config file.
+
+        Parameters
+        ----------
+        path : string or None
+            If none, will default to '~/.config/alsacontrol/config'
+        """
+        if path is None:
+            path = os.path.expanduser('~/.config/alsacontrol/config')
+        logger.debug('Using config file at %s', path)
+
+        self._path = path
         self._config = {}
         self.mtime = 0
 
@@ -169,11 +178,15 @@ class Config:
         return True
 
 
-def get_config():
-    """Ask for the config. Initialize it if not yet done so."""
+def get_config(*args, **kwargs):
+    """Ask for the config. Initialize it if not yet done so.
+
+    Will pass any parameters to the config constructor. Only needed in tests
+    to avoid writing the users config.
+    """
     # don't initialize it right away in the global scope, to avoid having
     # the wrong logging verbosity.
     global _config
     if _config is None:
-        _config = Config()
+        _config = Config(*args, **kwargs)
     return _config

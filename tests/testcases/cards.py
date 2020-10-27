@@ -21,24 +21,28 @@
 
 import unittest
 
-from alsacontrol.config import _modify_config
+from alsacontrol.config import get_config
+from alsacontrol.cards import input_exists, get_current_card, get_card
 
 
-class ConfigTest(unittest.TestCase):
-    def test_first_line(self):
-        contents = """a=1\n # test=3\n  abc=123"""
-        contents = _modify_config(contents, 'a', 3)
-        self.assertEqual(contents, """a=3\n # test=3\n  abc=123""")
+class CardsTest(unittest.TestCase):
+    def test_null_input(self):
+        config = get_config()
+        config.set('pcm_input', 'null')
 
-    def test_last_line(self):
-        contents = """a=1\n # test=3\n  abc=123"""
-        contents = _modify_config(contents, 'abc', 'foo')
-        self.assertEqual(contents, """a=1\n # test=3\nabc=foo""")
+        self.assertFalse(input_exists('test_null_input'))
+        self.assertIsNone(get_current_card('pcm_input')[0])
+        self.assertIsNone(get_current_card('pcm_input')[1])
+        self.assertIsNone(get_card(config.get('pcm_input')))
 
-    def test_new_line(self):
-        contents = """a=1\n # test=3\n  abc=123"""
-        contents = _modify_config(contents, 'test', '1234')
-        self.assertEqual(contents, """a=1\n # test=3\n  abc=123\ntest=1234""")
+    def test_null_output(self):
+        config = get_config()
+        config.set('pcm_output', 'null')
+
+        self.assertFalse(input_exists('test_null_output'))
+        self.assertIsNone(get_current_card('pcm_output')[0])
+        self.assertIsNone(get_current_card('pcm_output')[1])
+        self.assertIsNone(get_card(config.get('pcm_output')))
 
 
 if __name__ == "__main__":
