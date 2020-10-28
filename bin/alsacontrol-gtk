@@ -82,12 +82,12 @@ class InputLevel:
         self.card = card
 
         self.valid = True
-        self.stopped = True
+        self.running = False
         self.pcm = None
 
     def start_monitoring(self):
         """Start the loop to monitor the input level."""
-        if not self.stopped:
+        if self.running:
             return
 
         card = self.card
@@ -110,7 +110,7 @@ class InputLevel:
 
         self.pcm = pcm
 
-        self.stopped = False
+        self.running = True
 
         # call once immediately to figure out if the input is valid
         self.loop()
@@ -118,17 +118,18 @@ class InputLevel:
 
     def stop_monitoring(self):
         """Stop monitoring the input level."""
-        self.stopped = True
+        self.running = False
 
     def loop(self):
         """Refresh the input level of the row."""
-        if self.stopped:
+        if not self.running:
             return False
 
         try:
             new_level = get_level(self.pcm)
         except alsaaudio.ALSAAudioError:
             logger.error('Could not monitor the level of "%s"', self.card)
+            self.stop_monitoring()
             self.valid = False
             return False
 
@@ -155,6 +156,7 @@ class InputRow:
         self.select_button = None
         self._input_level_monitor = None
         self.box = None
+        self.label = None
         self.select_callback = select_callback
         self.select_handler_id = None
         self.put_together()
@@ -201,6 +203,7 @@ class InputRow:
         box.set_margin_end(22)
         box.show_all()
 
+        self.label = pcm_name
         self.box = box
 
     def start_monitoring(self):
@@ -208,6 +211,7 @@ class InputRow:
         self._input_level_monitor.start_monitoring()
         if not self._input_level_monitor.valid:
             self.box.set_opacity(0.3)
+            self.label.set_label(f'{self.card} (not available)')
     
     def stop_monitoring(self):
         """Stop monitoring to avoid doing useless stuff in the background."""
@@ -241,7 +245,7 @@ class ALSAControlWindow:
         builder.connect_signals(self)
         self.builder = builder
 
-        self.card_selection = self.builder.get_object(
+        self.card_selection = self.get(
             'output_card_selection'
         )
 
@@ -272,21 +276,25 @@ class ALSAControlWindow:
 
     """General Stuff"""
 
+    def get(self, name):
+        """Get a widget from the window"""
+        return self.builder.get_object(name)
+
     def check_pulse(self):
         """If pulsaudio is running, show warning text and stop button."""
         if is_pulse_running():
             logger.fatal('Pulseaudio is running')
-            self.builder.get_object('pulse_dialog_text').set_text(
+            self.get('pulse_dialog_text').set_text(
                 'This app may not work correctly with Pulseaudio. '
                 'Consider using pavucontrol instead or stop it.'
             )
-            self.builder.get_object('pulse_dialog').show()
+            self.get('pulse_dialog').show()
         else:
-            self.builder.get_object('pulse_dialog').hide()
+            self.get('pulse_dialog').hide()
 
     def on_close_pulse_dialog_clicked(self, _):
         """Hide the pulseaudio warning dialog."""
-        self.builder.get_object('pulse_dialog').hide()
+        self.get('pulse_dialog').hide()
 
     @only_with_existing_output
     def volume_changed_externally(self):
@@ -317,7 +325,7 @@ class ALSAControlWindow:
     @only_with_existing_output
     def initialize_output_volume_slider(self):
         """Reflect the current volume and mute state in the output tab."""
-        output_slider = self.builder.get_object('output_volume_slider_scale')
+        output_slider = self.get('output_volume_slider_scale')
         output_volume = get_volume(alsaaudio.PCM_PLAYBACK, nonlinear=True) or 0
         output_slider.set_value(output_volume)
         output_muted = is_muted(OUTPUT_MUTE)
@@ -326,7 +334,7 @@ class ALSAControlWindow:
     @only_with_existing_input
     def initialize_input_volume_slider(self):
         """Reflect the current volume and mute state in the input tab."""
-        input_slider = self.builder.get_object('input_volume_slider_scale')
+        input_slider = self.get('input_volume_slider_scale')
         input_volume = get_volume(alsaaudio.PCM_CAPTURE, nonlinear=True) or 0
         input_slider.set_value(input_volume)
         input_muted = is_muted(INPUT_MUTE)
@@ -335,7 +343,7 @@ class ALSAControlWindow:
     def on_switch_page(self, notebook, page, page_num):
         """Handler to trigger when one of the tabs is clicked."""
         page_name = page.get_name()
-        input_cards_scrolled_window = self.builder.get_object(
+        input_cards_scrolled_window = self.get(
             'input_cards_scrolled_window'
         )
         if page_name == 'input_card_tab':
@@ -344,7 +352,7 @@ class ALSAControlWindow:
             for input_row in self.input_rows:
                 input_row.start_monitoring()
             # invalid inputs to the bottom
-            input_cards_list = self.builder.get_object('input_cards_list')
+            input_cards_list = self.get('input_cards_list')
             for input_row in self.input_rows:
                 if not input_row.is_valid():
                     widget = input_row.get_widget()
@@ -373,14 +381,14 @@ class ALSAControlWindow:
             If audio can't currently play. True or False
         """
         volume_string = get_volume_string(volume, muted)
-        volume_label = self.builder.get_object(f'{tab}_volume_current')
+        volume_label = self.get(f'{tab}_volume_current')
         volume_label.set_label(volume_string)
 
-        mute_icon = self.builder.get_object(f'mute_{tab}')
+        mute_icon = self.get(f'mute_{tab}')
         mute_icon.set_active(muted)
 
         volume_icon_name = get_volume_icon(volume, muted)
-        volume_image = self.builder.get_object(f'{tab}_volume_icon')
+        volume_image = self.get(f'{tab}_volume_icon')
         volume_image.set_from_icon_name(volume_icon_name, Gtk.IconSize.BUTTON)
 
     def on_stop_pulseaudio_clicked(self, _):
@@ -388,7 +396,7 @@ class ALSAControlWindow:
         stop_pulse()
         # wait a second to actually see the result. It might just start
         # again, but since systemctl is used to stop it it is unlikely.
-        self.builder.get_object('pulse_dialog').hide()
+        self.get('pulse_dialog').hide()
         GLib.timeout_add(1000, self.check_pulse)
 
     def on_toggle_daemon_clicked(self, _):
@@ -398,7 +406,7 @@ class ALSAControlWindow:
     def refresh_toggle_daemon_text(self):
         """Set the toggle daemon button text depending on if it is running."""
         label = self.get_toggle_daemon_text(is_daemon_running())
-        self.builder.get_object('toggle_daemon').set_label(label)
+        self.get('toggle_daemon').set_label(label)
         return True
 
     def get_toggle_daemon_text(self, running):
@@ -407,11 +415,11 @@ class ALSAControlWindow:
 
     def populate_advanced_settings(self):
         """Display the current configuration in the Advanced tab."""
-        use_dmix = self.builder.get_object('use_dmix')
-        use_output_softvol = self.builder.get_object('use_output_softvol')
-        num_output_channels = self.builder.get_object('num_output_channels')
-        use_dsnoop = self.builder.get_object('use_dsnoop')
-        use_input_softvol = self.builder.get_object('use_input_softvol')
+        use_dmix = self.get('use_dmix')
+        use_output_softvol = self.get('use_output_softvol')
+        num_output_channels = self.get('num_output_channels')
+        use_dsnoop = self.get('use_dsnoop')
+        use_input_softvol = self.get('use_input_softvol')
         with HandlerDisabled([
                 use_dmix,
                 use_output_softvol,
@@ -430,11 +438,11 @@ class ALSAControlWindow:
 
     def update_config(self, _):
         """Update all config values based on the advanced configuration."""
-        use_dmix = self.builder.get_object('use_dmix')
-        use_output_softvol = self.builder.get_object('use_output_softvol')
-        num_output_channels = self.builder.get_object('num_output_channels')
-        use_dsnoop = self.builder.get_object('use_dsnoop')
-        use_input_softvol = self.builder.get_object('use_input_softvol')
+        use_dmix = self.get('use_dmix')
+        use_output_softvol = self.get('use_output_softvol')
+        num_output_channels = self.get('num_output_channels')
+        use_dsnoop = self.get('use_dsnoop')
+        use_input_softvol = self.get('use_input_softvol')
         config = get_config()
         config.set('output_use_dmix', use_dmix.get_active())
         config.set('output_use_softvol', use_output_softvol.get_active())
@@ -550,7 +558,7 @@ class ALSAControlWindow:
             input_card.destroy()
         self.input_rows = []
 
-        input_cards_list = self.builder.get_object('input_cards_list')
+        input_cards_list = self.get('input_cards_list')
 
         cards = get_cards()
         for card in cards:
@@ -614,7 +622,7 @@ class ALSAControlWindow:
         """
         card = get_current_card('pcm_input')[1]
 
-        label = self.builder.get_object('input_card_name')
+        label = self.get('input_card_name')
 
         if card is None:
             label.set_label(

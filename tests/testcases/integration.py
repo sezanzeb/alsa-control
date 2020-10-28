@@ -85,7 +85,8 @@ class Integration(unittest.TestCase):
         input_row = self.window.input_rows[0]
         input_card_name = self.window.builder.get_object('input_card_name')
 
-        # since the config starts with 'null' as default, no card should be selected
+        # since the config starts with 'null' as default,
+        # no card should be selected
         self.assertEqual(get_config().get('pcm_input'), 'null')
         self.assertIn('No card selected', input_card_name.get_label())
 
@@ -96,6 +97,32 @@ class Integration(unittest.TestCase):
         input_row.select_callback(input_row.card)
         self.assertEqual(get_config().get('pcm_input'), 'null')
         self.assertIn('No card selected', input_card_name.get_label())
+
+    def test_go_to_input_page(self):
+        # should start at the output page, no monitoring should be active now
+        self.assertNotIn(True, [
+            input_row._input_level_monitor.running
+            for input_row
+            in self.window.input_rows
+        ])
+
+        notebook = self.window.get('tabs')
+
+        notebook.set_current_page(1)
+        # at least one should be monitoring now
+        self.assertIn(True, [
+            input_row._input_level_monitor.running
+            for input_row
+            in self.window.input_rows
+        ])
+
+        notebook.set_current_page(0)
+        # and back to stopping them all
+        self.assertNotIn(True, [
+            input_row._input_level_monitor.running
+            for input_row
+            in self.window.input_rows
+        ])
 
 
 if __name__ == "__main__":
