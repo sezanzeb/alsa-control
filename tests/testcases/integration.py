@@ -25,12 +25,12 @@ from unittest.mock import patch
 from importlib.util import spec_from_loader, module_from_spec
 from importlib.machinery import SourceFileLoader
 
-from alsacontrol.config import get_config
-from alsacontrol.cards import input_exists, get_current_card, get_card
-
+import alsaaudio
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
+
+from alsacontrol.config import get_config
 
 
 def gtk_iteration():
@@ -97,6 +97,30 @@ class Integration(unittest.TestCase):
         input_row.select_callback(input_row.card)
         self.assertEqual(get_config().get('pcm_input'), 'null')
         self.assertIn('No card selected', input_card_name.get_label())
+
+    def test_select_output(self):
+        cards = alsaaudio.cards()
+        card_index = 0
+        config = get_config()
+
+        class FakeDropdown:
+            """Acts like a Gtk.ComboBoxText object."""
+            def get_active_text(self):
+                return cards[card_index]
+
+        self.window.on_output_card_selected(FakeDropdown())
+        self.assertEqual(
+            config.get('pcm_output'),
+            f'hw:CARD={cards[card_index]}'
+        )
+
+        card_index = 1
+        config.set('output_plugin', 'ab')
+        self.window.on_output_card_selected(FakeDropdown())
+        self.assertEqual(
+            config.get('pcm_output'),
+            f'ab:CARD={cards[card_index]}'
+        )
 
     def test_go_to_input_page(self):
         # should start at the output page, no monitoring should be active now
