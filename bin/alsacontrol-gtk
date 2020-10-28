@@ -72,82 +72,6 @@ class HandlerDisabled:
             widget.handler_unblock_by_func(self.handler)
 
 
-class InputRow:
-    """A single selectable input card with monitoring."""
-    def __init__(self, card, select_callback):
-        """Construct a row and add it to the list in the GUI."""
-        self.card = card  # card that this row represents
-        self.select_button = None
-        self.input_level_monitor = None
-        self.box = None
-        self.vailid = True
-        self.select_callback = select_callback
-        self.select_handler_id = None
-        self.put_together()
-
-    def is_valid(self):
-        """Check if this input works."""
-        return self.input_level_monitor.valid
-
-    def get_widget(self):
-        """Return the widget that wraps all the widgets of the row."""
-        return self.box
-
-    def put_together(self):
-        """Create all GTK widgets and the level monitor"""
-        card = self.card
-        level_bar = Gtk.ProgressBar()
-        level_bar.set_valign(Gtk.Align.CENTER)
-
-        input_level_monitor = InputLevel(card, level_bar, self)
-        self.input_level_monitor = input_level_monitor
-        if not input_level_monitor.valid:
-            level_bar.destroy()
-            return
-
-        select_button = Gtk.ToggleButton()
-        select_icon = Gtk.Image.new_from_icon_name(
-            'object-select', Gtk.IconSize.BUTTON
-        )
-        select_button.set_image(select_icon)
-        self.select_handler_id = select_button.connect(
-            'clicked',
-            lambda _: self.select_callback(card)
-        )
-        self.select_button = select_button
-
-        pcm_name = Gtk.Label(label=card)
-        pcm_name.set_xalign(0.0)
-
-        box = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            spacing=10
-        )
-        box.pack_start(select_button, expand=False, fill=True, padding=0)
-        box.pack_start(pcm_name, expand=True, fill=True, padding=0)
-        box.pack_start(level_bar, expand=False, fill=False, padding=0)
-        box.set_margin_start(10)
-        box.set_margin_end(22)
-        box.show_all()
-        self.box = box
-
-    def stop_monitor(self):
-        """Stop monitoring the input."""
-        self.input_level_monitor.stop()
-
-    def destroy(self):
-        """Stop monitoring and destroy the row."""
-        self.input_level_monitor.stop()
-        self.box.destroy()
-
-    def set_active(self, active):
-        """Set if the button should be highlighted. Doesn't emit events."""
-        if self.select_button.get_active() != active:
-            self.select_button.handler_block(self.select_handler_id)
-            self.select_button.set_active(active)
-            self.select_button.handler_unblock(self.select_handler_id)
-
-
 class InputLevel:
     """Shows smooth indicators for the input level."""
     def __init__(self, card, level_bar, window):
@@ -158,13 +82,14 @@ class InputLevel:
         self.card = card
 
         self.valid = True
-        self.stopped = False
+        self.stopped = True
         self.pcm = None
-
-        self.start_monitoring()
 
     def start_monitoring(self):
         """Start the loop to monitor the input level."""
+        if not self.stopped:
+            return
+
         card = self.card
         if card == 'jack':
             card = 'alsacontrol-jack-input'
@@ -184,9 +109,14 @@ class InputLevel:
             return
 
         self.pcm = pcm
+
+        self.stopped = False
+
+        # call once immediately to figure out if the input is valid
+        self.loop()
         GLib.timeout_add(1000 / 60, self.loop)
 
-    def stop(self):
+    def stop_monitoring(self):
         """Stop monitoring the input level."""
         self.stopped = True
 
@@ -215,6 +145,85 @@ class InputLevel:
         # Keep the UI responsive
         Gtk.main_iteration()
         return True
+
+
+class InputRow:
+    """A single selectable input card with monitoring."""
+    def __init__(self, card, select_callback):
+        """Construct a row and add it to the list in the GUI."""
+        self.card = card  # card that this row represents
+        self.select_button = None
+        self._input_level_monitor = None
+        self.box = None
+        self.select_callback = select_callback
+        self.select_handler_id = None
+        self.put_together()
+
+    def is_valid(self):
+        """Check if this input works."""
+        return self._input_level_monitor.valid
+
+    def get_widget(self):
+        """Return the widget that wraps all the widgets of the row."""
+        return self.box
+
+    def put_together(self):
+        """Create all GTK widgets and the level monitor"""
+        card = self.card
+        level_bar = Gtk.ProgressBar()
+        level_bar.set_valign(Gtk.Align.CENTER)
+
+        input_level_monitor = InputLevel(card, level_bar, self)
+        self._input_level_monitor = input_level_monitor
+
+        select_button = Gtk.ToggleButton()
+        select_icon = Gtk.Image.new_from_icon_name(
+            'object-select', Gtk.IconSize.BUTTON
+        )
+        select_button.set_image(select_icon)
+        self.select_handler_id = select_button.connect(
+            'clicked',
+            lambda _: self.select_callback(card)
+        )
+        self.select_button = select_button
+
+        pcm_name = Gtk.Label(label=card)
+        pcm_name.set_xalign(0.0)
+
+        box = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=10
+        )
+        box.pack_start(select_button, expand=False, fill=True, padding=0)
+        box.pack_start(pcm_name, expand=True, fill=True, padding=0)
+        box.pack_start(level_bar, expand=False, fill=False, padding=0)
+        box.set_margin_start(10)
+        box.set_margin_end(22)
+        box.show_all()
+
+        self.box = box
+
+    def start_monitoring(self):
+        """Start monitoring and if not possible, grey out the row."""
+        self._input_level_monitor.start_monitoring()
+        if not self._input_level_monitor.valid:
+            self.box.set_opacity(0.3)
+    
+    def stop_monitoring(self):
+        """Stop monitoring to avoid doing useless stuff in the background."""
+        self._input_level_monitor.stop_monitoring()
+
+    def destroy(self):
+        """Stop monitoring and destroy the row."""
+        self._input_level_monitor.stop_monitoring()
+        self.box.destroy()
+
+    def set_active(self, active):
+        """Set if the button should be highlighted. Doesn't emit events."""
+        if self.select_button.get_active() != active:
+            self.select_button.handler_block(self.select_handler_id)
+            self.select_button.set_active(active)
+            self.select_button.handler_unblock(self.select_handler_id)
 
 
 class ALSAControlWindow:
@@ -330,8 +339,24 @@ class ALSAControlWindow:
             'input_cards_scrolled_window'
         )
         if page_name == 'input_card_tab':
+            # enable monitoring since it may have been disabled
+            # previously
+            for input_row in self.input_rows:
+                input_row.start_monitoring()
+            # invalid inputs to the bottom
+            input_cards_list = self.builder.get_object('input_cards_list')
+            for input_row in self.input_rows:
+                if not input_row.is_valid():
+                    widget = input_row.get_widget()
+                    input_cards_list.reorder_child(widget, -1)
+
             input_cards_scrolled_window.show()
         else:
+            # don't monitor while not being on the tab to avoid making the
+            # audio output stop while checking on the input, which is
+            # not how things should go. It's probably an issue with alsa.
+            for input_row in self.input_rows:
+                input_row.stop_monitoring()
             # shrink the output tab height to the contents
             input_cards_scrolled_window.hide()
 
@@ -529,18 +554,12 @@ class ALSAControlWindow:
 
         cards = get_cards()
         for card in cards:
-            # for each possible output, construct an InputRow, which also
-            # figures out if the card is usable as input.
             input_row = InputRow(card, self.on_input_card_selected)
-            if input_row.is_valid():
-                # If it can be used, register it so that it
-                # can be manipulated
-                input_cards_list.pack_start(
-                    input_row.get_widget(),
-                    expand=False, fill=False, padding=10
-                )
-                self.input_rows.append(input_row)
-            continue
+            self.input_rows.append(input_row)
+            input_cards_list.pack_start(
+                input_row.get_widget(),
+                expand=False, fill=False, padding=10
+            )
 
         self.display_input()
 
@@ -577,7 +596,7 @@ class ALSAControlWindow:
     def stop_input_levels(self):
         """Stop all loops that monitor input levels."""
         for input_level in self.input_levels:
-            input_level.stop()
+            input_level.stop_monitoring()
         self.input_levels = []
 
     def select_current_input(self):
