@@ -122,6 +122,25 @@ class Integration(unittest.TestCase):
             f'ab:CARD={cards[card_index]}'
         )
 
+    def test_select_input(self):
+        cards = alsaaudio.cards()
+        card_index = 0
+        config = get_config()
+
+        self.window.on_input_card_selected(cards[card_index])
+        self.assertEqual(
+            config.get('pcm_input'),
+            f'hw:CARD={cards[card_index]}'
+        )
+
+        card_index = 1
+        config.set('input_plugin', 'ab')
+        self.window.on_input_card_selected(cards[card_index])
+        self.assertEqual(
+            config.get('pcm_input'),
+            f'ab:CARD={cards[card_index]}'
+        )
+
     def test_go_to_input_page(self):
         # should start at the output page, no monitoring should be active now
         self.assertNotIn(True, [
