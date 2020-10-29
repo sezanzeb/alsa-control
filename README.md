@@ -17,7 +17,7 @@ volume change doesn't affect it. Before starting jack, the ALSA-Control GUI need
 jack can't acquire the input device as long as the level is monitored, or you select "none" as input
 in Cadence.
 
-## Usage
+## Installation
 
 Install [alsa-control from the AUR](https://aur.archlinux.org/packages/alsa-control/) or run:
 
@@ -25,6 +25,8 @@ Install [alsa-control from the AUR](https://aur.archlinux.org/packages/alsa-cont
 pip3 install pyalsaaudio
 python3 setup.py install
 ```
+
+## Usage
 
 It should create an entry in your applications menu. But you can also start it from the console:
 
