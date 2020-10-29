@@ -142,21 +142,23 @@ class Integration(unittest.TestCase):
 
     def test_select_input(self):
         cards = alsaaudio.cards()
-        card_index = 0
         config = get_config()
 
-        self.window.on_input_card_selected(cards[card_index])
+        self.window.on_input_card_selected(cards[0])
         self.assertEqual(
             config.get('pcm_input'),
-            f'hw:CARD={cards[card_index]}'
+            f'hw:CARD={cards[0]}'
         )
 
-        card_index = 1
+        # selecting it a second time unselects it
+        self.window.on_input_card_selected(cards[0])
+        self.assertEqual(config.get('pcm_input'), 'null')
+
         config.set('input_plugin', 'ab')
-        self.window.on_input_card_selected(cards[card_index])
+        self.window.on_input_card_selected(cards[1])
         self.assertEqual(
             config.get('pcm_input'),
-            f'ab:CARD={cards[card_index]}'
+            f'ab:CARD={cards[1]}'
         )
 
     def test_go_to_input_page(self):
