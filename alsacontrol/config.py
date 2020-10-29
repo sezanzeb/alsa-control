@@ -44,12 +44,13 @@ _defaults = {
 
 
 def _modify_config(config_contents, key, value):
-    """Write settings into a config files contents.
+    """Return a string representing the modified contents of the config file.
 
     Parameters
     ----------
     config_contents : string
-        Contents of the config file in ~/.config/alsacontrol/config
+        Contents of the config file in ~/.config/alsacontrol/config.
+        It is not edited in place and the config file is not overwritten.
     key : string
         Settings key that should be modified
     value : string, int
@@ -97,14 +98,17 @@ class Config:
         self._config = {}
         self.mtime = 0
 
-        # create an empty config if it doesn't exist
+        self.create_config_file()
+
+        self.load_config()
+
+    def create_config_file(self):
+        """Create an empty config if it doesn't exist."""
         if not os.path.exists(os.path.dirname(self._path)):
             os.makedirs(os.path.dirname(self._path))
         if not os.path.exists(self._path):
             logger.info('Creating config file "%s"', self._path)
             os.mknod(self._path)
-
-        self.load_config()
 
     def load_config(self):
         """Read the config file."""

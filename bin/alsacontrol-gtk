@@ -482,17 +482,19 @@ class ALSAControlWindow:
 
     def on_output_card_selected(self, card_dropdown):
         """Handler for when a card is selected or the list just changed."""
-        if not output_exists('on_output_card_selected'):
-            play_silence()
-
         card_name = card_dropdown.get_active_text()
         if card_name is None:
             return
-        if get_current_card('pcm_output')[1] == card_name:
-            # already at the correct selection
-            return
-        select_output_pcm(card_name)
-        setup_asoundrc()
+
+        if get_current_card('pcm_output')[1] != card_name:
+            # card was changed
+            select_output_pcm(card_name)
+            setup_asoundrc()
+
+        # in any case, if a card is selected but the mixers are not found,
+        # try to find them.
+        if not output_exists('on_output_card_selected'):
+            play_silence()
 
     @only_with_existing_output
     def on_output_volume_change(self, gtk_range):
@@ -582,7 +584,7 @@ class ALSAControlWindow:
         setup_asoundrc()
         self.display_input()
 
-        if not input_exists('on_input_card_selected'):
+        if card is not None and not input_exists('on_input_card_selected'):
             record_to_nowhere()
 
     @only_with_existing_input
@@ -612,7 +614,8 @@ class ALSAControlWindow:
         setup_asoundrc()
         self.display_input()
 
-        if not input_exists('on_input_card_selected'):
+        card = get_current_card('pcm_input')[1]
+        if card is not None and not input_exists('on_input_card_selected'):
             record_to_nowhere()
 
     def display_input(self):

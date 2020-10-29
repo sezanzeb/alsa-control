@@ -19,6 +19,7 @@
 # along with ALSA-Control.  If not, see <https://www.gnu.org/licenses/>.
 
 
+import os
 import sys
 import unittest
 from unittest.mock import patch
@@ -31,6 +32,8 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
 from alsacontrol.config import get_config
+from alsacontrol import services
+from fakes import UseFakes, fake_config_path
 
 
 def gtk_iteration():
@@ -68,14 +71,29 @@ class Integration(unittest.TestCase):
         # there and just continue to the tests while the UI becomes
         # unresponsive
         Gtk.main = gtk_iteration
+
+        # doesn't do much except avoid some Gtk assertion error, whatever:
         Gtk.main_quit = lambda: None
 
     def setUp(self):
+        self.fakes = UseFakes()
+        self.fakes.patch()
         self.window = launch()
 
     def tearDown(self):
         self.window.on_close()
+        self.window.window.destroy()
         gtk_iteration()
+        self.fakes.restore()
+        if os.path.exists(fake_config_path):
+            os.remove(fake_config_path)
+        config = get_config()
+        config.create_config_file()
+        config.load_config()
+
+    def test_fakes(self):
+        self.assertEqual(alsaaudio.cards(), ['FakeCard1', 'FakeCard2'])
+        self.assertTrue(services.is_jack_running())
 
     def test_can_start(self):
         self.assertIsNotNone(self.window)
@@ -143,29 +161,30 @@ class Integration(unittest.TestCase):
 
     def test_go_to_input_page(self):
         # should start at the output page, no monitoring should be active now
-        self.assertNotIn(True, [
+        self.assertEqual([
             input_row._input_level_monitor.running
             for input_row
             in self.window.input_rows
-        ])
+        ], [False, False, False])
 
         notebook = self.window.get('tabs')
 
         notebook.set_current_page(1)
-        # at least one should be monitoring now
-        self.assertIn(True, [
+        # at least one should be monitoring now. The second card is
+        # configured to raise an error for this test.
+        self.assertEqual([
             input_row._input_level_monitor.running
             for input_row
             in self.window.input_rows
-        ])
+        ], [True, False, True])
 
         notebook.set_current_page(0)
         # and back to stopping them all
-        self.assertNotIn(True, [
+        self.assertEqual([
             input_row._input_level_monitor.running
             for input_row
             in self.window.input_rows
-        ])
+        ], [False, False, False])
 
 
 if __name__ == "__main__":

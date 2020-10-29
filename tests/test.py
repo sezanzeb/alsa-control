@@ -28,18 +28,17 @@ import unittest
 
 from alsacontrol.config import get_config
 from alsacontrol.logger import update_verbosity
+from fakes import fake_config_path
 
 
 if __name__ == "__main__":
     update_verbosity(debug=True)
 
-    config_path = '/tmp/alsacontrol-test-config'
-
-    if os.path.exists(config_path):
-        os.remove(config_path)
+    if os.path.exists(fake_config_path):
+        os.remove(fake_config_path)
 
     # don't overwrite the users settings in unittests
-    get_config(config_path)
+    get_config(fake_config_path)
 
     modules = sys.argv[1:]
     # discoverer is really convenient, but it can't find a specific test

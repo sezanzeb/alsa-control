@@ -25,19 +25,23 @@
 import alsaaudio
 
 from alsacontrol.alsa import play_silence, record_to_nowhere
-from alsacontrol.services import is_jack_running
+from alsacontrol import services
 from alsacontrol.logger import logger
 from alsacontrol.config import get_config
 
 
 def input_exists(func, testcard=True, testmixer=True):
-    """Check if the configured input card and mixer is available."""
+    """Check if the configured input card and mixer is available.
+
+    Returns None if no card is configured, because the existance of 'no' card
+    cannot be determined.
+    """
     # might be a pcm name with plugin and device
     card = get_card(get_config().get('pcm_input'))
     if testcard:
         if card is None:
             logger.debug('%s, No input selected', func)
-            return False
+            return None
         if not card in alsaaudio.cards():
             logger.error('%s, Could not find the input card "%s"', func, card)
             return False
@@ -53,9 +57,13 @@ def output_exists(func, testcard=True, testmixer=True):
     """Check if the configured output card and mixer is available."""
     # might be a pcm name with plugin and device
     card = get_card(get_config().get('pcm_output'))
-    if testcard and not card in get_cards():
-        logger.error('%s, Could not find the output card "%s"', func, card)
-        return False
+    if testcard:
+        if card is None:
+            logger.debug('%s, No output selected', func)
+            return None
+        if not card in get_cards():
+            logger.error('%s, Could not find the output card "%s"', func, card)
+            return False
     if testmixer and get_config().get('output_use_softvol'):
         if 'alsacontrol-output-volume' not in alsaaudio.mixers():
             logger.error('%s, Could not find the output softvol mixer', func)
@@ -107,7 +115,7 @@ def get_card(pcm):
 def get_cards():
     """List all cards, including options such as jack."""
     cards = alsaaudio.cards()
-    if is_jack_running():
+    if services.is_jack_running():
         cards.append('jack')
     if len(cards) == 0:
         logger.error('Could not find any card')
