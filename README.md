@@ -78,7 +78,7 @@ Basically provide everything that is needed to comfortably use ALSA without puls
 - [x] Start the daemon on login
 - [x] Make dmix, softvol, dsnoop, channels and samplerate configurable
 - [x] Get it into the AUR
-- [x] Write specs for the UI (using stubs for pyalsaaudio)
+- [x] Write some specs for the UI (using stubs for pyalsaaudio)
 - [ ] Provide .deb files
 
 ## Testing
