@@ -23,6 +23,8 @@ Install [alsa-control from the AUR](https://aur.archlinux.org/packages/alsa-cont
 
 ```
 pip3 install pyalsaaudio
+git clone https://github.com/sezanzeb/alsa-control.git
+cd alsa-control
 python3 setup.py install
 ```
 
