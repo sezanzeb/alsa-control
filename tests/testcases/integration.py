@@ -32,7 +32,9 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
 from alsacontrol.config import get_config
+from alsacontrol.cards import get_cards
 from alsacontrol import services
+from alsacontrol.asoundrc import alsactl_asoundrc
 from fakes import UseFakes, fake_config_path
 
 
@@ -44,7 +46,7 @@ def gtk_iteration():
 
 def launch(argv=None, bin_path='bin/alsacontrol-gtk'):
     """Start alsacontrol-gtk with the command line argument array argv."""
-    print('Launching UI')
+    print('\nLaunching UI')
     if not argv:
         argv = ['-d']
 
@@ -118,50 +120,91 @@ class Integration(unittest.TestCase):
 
     def test_select_output(self):
         cards = alsaaudio.cards()
-        card_index = 0
         config = get_config()
+        selected_index = 0
 
         class FakeDropdown:
             """Acts like a Gtk.ComboBoxText object."""
             def get_active_text(self):
-                return cards[card_index]
+                return cards[selected_index]
 
         self.window.on_output_card_selected(FakeDropdown())
         self.assertEqual(
             config.get('pcm_output'),
-            f'hw:CARD={cards[card_index]}'
+            f'hw:CARD={cards[selected_index]}'
         )
+        with open(alsactl_asoundrc, 'r') as f:
+            asoundrc = f.read()
+            self.assertIn(config.get('pcm_output'), asoundrc)
+            self.assertNotIn(cards[1], asoundrc)
 
-        card_index = 1
+        selected_index = 1
         config.set('output_plugin', 'ab')
         self.window.on_output_card_selected(FakeDropdown())
         self.assertEqual(
             config.get('pcm_output'),
-            f'ab:CARD={cards[card_index]}'
+            f'ab:CARD={cards[selected_index]}'
         )
+        with open(alsactl_asoundrc, 'r') as f:
+            asoundrc = f.read()
+            self.assertNotIn(cards[0], asoundrc)
+            self.assertIn(config.get('pcm_output'), asoundrc)
 
     def test_select_input(self):
         cards = alsaaudio.cards()
         config = get_config()
 
+        # only show the input in the generated asoundrc to make
+        # assertIn not get false positives.
+        # Since there are some comments and stuff about jack in it, this
+        # test avoids to also try to select jack.
+        config.set('pcm_output', 'null')
+
+        # first card
         self.window.on_input_card_selected(cards[0])
         self.assertEqual(
             config.get('pcm_input'),
             f'hw:CARD={cards[0]}'
         )
+        with open(alsactl_asoundrc, 'r') as f:
+            asoundrc = f.read()
+            self.assertIn(config.get('pcm_input'), asoundrc)
+            self.assertNotIn(cards[1], asoundrc)
 
         # selecting it a second time unselects it
         self.window.on_input_card_selected(cards[0])
         self.assertEqual(config.get('pcm_input'), 'null')
+        with open(alsactl_asoundrc, 'r') as f:
+            asoundrc = f.read()
+            self.assertNotIn(cards[0], asoundrc)
+            self.assertNotIn(cards[1], asoundrc)
 
+        # second card
         config.set('input_plugin', 'ab')
         self.window.on_input_card_selected(cards[1])
         self.assertEqual(
             config.get('pcm_input'),
             f'ab:CARD={cards[1]}'
         )
+        with open(alsactl_asoundrc, 'r') as f:
+            asoundrc = f.read()
+            self.assertNotIn(cards[0], asoundrc)
+            self.assertIn(config.get('pcm_input'), asoundrc)
+
+    def test_detect_jack(self):
+        # cards return only the actual hardware cards,
+        self.assertEqual(alsaaudio.cards(), ['FakeCard1', 'FakeCard2'])
+        # but since is_jack_running is patched to return true, it is added
+        # to the lists.
+        self.assertEqual(get_cards(), ['FakeCard1', 'FakeCard2', 'jack'])
+        self.assertEqual([
+            input_row.card
+            for input_row
+            in self.window.input_rows
+        ], ['FakeCard1', 'FakeCard2', 'jack'])
 
     def test_go_to_input_page(self):
+
         # should start at the output page, no monitoring should be active now
         self.assertEqual([
             input_row._input_level_monitor.running

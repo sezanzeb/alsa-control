@@ -25,9 +25,11 @@
 import alsaaudio
 
 from alsacontrol.alsa import play_silence, record_to_nowhere
-from alsacontrol import services
 from alsacontrol.logger import logger
 from alsacontrol.config import get_config
+# don't import is_jack_running directly to make patching this in tests
+# possible
+from alsacontrol import services
 
 
 def input_exists(func, testcard=True, testmixer=True):
