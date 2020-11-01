@@ -365,7 +365,6 @@ class ALSAControlWindow:
             # not how things should go. It's probably an issue with alsa.
             for input_row in self.input_rows:
                 input_row.stop_monitoring()
-            # shrink the output tab height to the contents
             input_cards_scrolled_window.hide()
 
     def refresh_icon_state(self, tab, volume, muted):
