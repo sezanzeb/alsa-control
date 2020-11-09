@@ -84,6 +84,7 @@ Basically provide everything that is needed to comfortably use ALSA without puls
 - [x] Make dmix, softvol, dsnoop, channels and samplerate configurable
 - [x] Get it into the AUR
 - [x] Write some specs for the UI (using stubs for pyalsaaudio)
+- [ ] Detect when sound-test is blocking and doing nothing
 - [ ] Provide .deb files
 
 ## Testing
