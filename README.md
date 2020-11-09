@@ -7,7 +7,8 @@ while the GUI may work as a replacement for pavucontrol.
 Not having pulseaudio is not compatible with everything. For example, Discord in Firefox and Terraria were silent without Pulseaudio.
 Maybe [apulse](https://github.com/i-rinat/apulse) helps.
 
-If you encounter problems, don't hesitate to open an issue in this repo!
+If you encounter problems, don't hesitate to open an issue in this repo! Even if the issues that prevent this app from working are
+ALSA related, it would be nice if they can be detected and named in the GUI.
 
 ## Jack
 
@@ -91,3 +92,7 @@ Basically provide everything that is needed to comfortably use ALSA without puls
 pylint alsacontrol --extension-pkg-whitelist=alsaaudio
 sudo python3 setup.py install && python3 tests/test.py
 ```
+
+## Contributing
+
+I'm interested in your pull requests and will gladly review them. Make sure to give your code docstrings and make it as PEP compliant as possible.
