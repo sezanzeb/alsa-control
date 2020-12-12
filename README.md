@@ -10,6 +10,9 @@ Maybe [apulse](https://github.com/i-rinat/apulse) helps.
 If you encounter problems, don't hesitate to open an issue in this repo! Even if the issues that prevent this app from working are
 ALSA related, it would be nice if they can be detected and named in the GUI.
 
+You might be interested in https://pipewire.org/. My audio broke in various ways again after updating stuff, rendering any .asoundrc
+configs useless as well, but pipewire works.
+
 ## Jack
 
 You can use this to control the volume while running jack. Firefox seems to prefer talking to
