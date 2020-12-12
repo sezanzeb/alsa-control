@@ -11,7 +11,7 @@ If you encounter problems, don't hesitate to open an issue in this repo! Even if
 ALSA related, it would be nice if they can be detected and named in the GUI.
 
 You might be interested in https://pipewire.org/. My audio broke in various ways again after updating stuff, rendering any .asoundrc
-configs useless, breaking multiplexing even with dmix and pulseaudio, preventing the alsa-control sound test from working,
+configs useless, breaking multiplexing even with dmix and pulseaudio and preventing the alsa-control sound test from working,
 but pipewire works.
 
 ## Jack
